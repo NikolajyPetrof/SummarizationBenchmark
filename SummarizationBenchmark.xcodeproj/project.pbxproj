@@ -7,35 +7,41 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		FC09B08F2DF96CDF00DDEBF7 /* ArgumentParser in Frameworks */ = {isa = PBXBuildFile; productRef = FC09B08E2DF96CDF00DDEBF7 /* ArgumentParser */; };
+		FC09B0912DF96CDF00DDEBF7 /* generate-manual in Frameworks */ = {isa = PBXBuildFile; productRef = FC09B0902DF96CDF00DDEBF7 /* generate-manual */; };
 		FC53D63D2DF8080700831793 /* MLX in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D63C2DF8080700831793 /* MLX */; };
 		FC53D63F2DF8080700831793 /* MLXFFT in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D63E2DF8080700831793 /* MLXFFT */; };
 		FC53D6412DF8080700831793 /* MLXFast in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6402DF8080700831793 /* MLXFast */; };
 		FC53D6432DF8080700831793 /* MLXLinalg in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6422DF8080700831793 /* MLXLinalg */; };
 		FC53D6452DF8080700831793 /* MLXNN in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6442DF8080700831793 /* MLXNN */; };
+		FC53D6C22DF8178D00831793 /* MLXEmbedders in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6C12DF8178D00831793 /* MLXEmbedders */; };
+		FC53D6C42DF8178D00831793 /* MLXLLM in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6C32DF8178D00831793 /* MLXLLM */; };
+		FC53D6C62DF8178D00831793 /* MLXLMCommon in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6C52DF8178D00831793 /* MLXLMCommon */; };
+		FC53D6C82DF8178D00831793 /* MLXMNIST in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6C72DF8178D00831793 /* MLXMNIST */; };
+		FC53D6CA2DF8178D00831793 /* MLXVLM in Frameworks */ = {isa = PBXBuildFile; productRef = FC53D6C92DF8178D00831793 /* MLXVLM */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		FC53D6252DF807A100831793 /* SummarizationBenchmark.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SummarizationBenchmark.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		FC53D6472DF808E100831793 /* SummarizationModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SummarizationModel.swift; sourceTree = "<group>"; };
-		FC53D6482DF808E700831793 /* BenchmarkResult.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkResult.swift; sourceTree = "<group>"; };
-		FC53D6492DF808ED00831793 /* ModelConfigurations.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelConfigurations.swift; sourceTree = "<group>"; };
-		FC53D64B2DF808FF00831793 /* BenchmarkViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkViewModel.swift; sourceTree = "<group>"; };
-		FC53D64D2DF8090C00831793 /* ModelManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelManager.swift; sourceTree = "<group>"; };
-		FC53D6512DF8092500831793 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
-		FC53D6522DF8092C00831793 /* ModelSelectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ModelSelectionView.swift; sourceTree = "<group>"; };
-		FC53D6532DF8093200831793 /* BenchmarkView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BenchmarkView.swift; sourceTree = "<group>"; };
-		FC53D6552DF8094000831793 /* ResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ResultsView.swift; sourceTree = "<group>"; };
-		FC53D6562DF8094E00831793 /* ComparisonView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ComparisonView.swift; sourceTree = "<group>"; };
-		FC53D6582DF8096300831793 /* PerformanceMetrics.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerformanceMetrics.swift; sourceTree = "<group>"; };
-		FC53D65A2DF8098B00831793 /* DataExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DataExporter.swift; sourceTree = "<group>"; };
-		FC53D65C2DF8099900831793 /* SampleTexts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SampleTexts.swift; sourceTree = "<group>"; };
-		FC53D65D2DF80A2900831793 /* MainContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainContentView.swift; sourceTree = "<group>"; };
-		FC53D65E2DF80A5F00831793 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
+
+/* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
+		FC53D6782DF80D4800831793 /* Exceptions for "SummarizationBenchmark" folder in "SummarizationBenchmark" target */ = {
+			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
+			membershipExceptions = (
+				Info.plist,
+				Utils/PerformanceMetrics.swift,
+			);
+			target = FC53D6242DF807A100831793 /* SummarizationBenchmark */;
+		};
+/* End PBXFileSystemSynchronizedBuildFileExceptionSet section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
 		FC53D6272DF807A100831793 /* SummarizationBenchmark */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
+			exceptions = (
+				FC53D6782DF80D4800831793 /* Exceptions for "SummarizationBenchmark" folder in "SummarizationBenchmark" target */,
+			);
 			path = SummarizationBenchmark;
 			sourceTree = "<group>";
 		};
@@ -46,10 +52,17 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FC53D6CA2DF8178D00831793 /* MLXVLM in Frameworks */,
+				FC09B08F2DF96CDF00DDEBF7 /* ArgumentParser in Frameworks */,
+				FC53D6C82DF8178D00831793 /* MLXMNIST in Frameworks */,
+				FC53D6C42DF8178D00831793 /* MLXLLM in Frameworks */,
 				FC53D6412DF8080700831793 /* MLXFast in Frameworks */,
+				FC09B0912DF96CDF00DDEBF7 /* generate-manual in Frameworks */,
 				FC53D6432DF8080700831793 /* MLXLinalg in Frameworks */,
+				FC53D6C22DF8178D00831793 /* MLXEmbedders in Frameworks */,
 				FC53D63D2DF8080700831793 /* MLX in Frameworks */,
 				FC53D6452DF8080700831793 /* MLXNN in Frameworks */,
+				FC53D6C62DF8178D00831793 /* MLXLMCommon in Frameworks */,
 				FC53D63F2DF8080700831793 /* MLXFFT in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -60,10 +73,6 @@
 		FC53D61C2DF807A100831793 = {
 			isa = PBXGroup;
 			children = (
-				FC53D6572DF8095500831793 /* Utils */,
-				FC53D6502DF8092000831793 /* Views */,
-				FC53D64A2DF808F700831793 /* ViewModels */,
-				FC53D6462DF808D600831793 /* Models */,
 				FC53D6272DF807A100831793 /* SummarizationBenchmark */,
 				FC53D6262DF807A100831793 /* Products */,
 			);
@@ -75,49 +84,6 @@
 				FC53D6252DF807A100831793 /* SummarizationBenchmark.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		FC53D6462DF808D600831793 /* Models */ = {
-			isa = PBXGroup;
-			children = (
-				FC53D6492DF808ED00831793 /* ModelConfigurations.swift */,
-				FC53D6482DF808E700831793 /* BenchmarkResult.swift */,
-				FC53D6472DF808E100831793 /* SummarizationModel.swift */,
-			);
-			path = Models;
-			sourceTree = "<group>";
-		};
-		FC53D64A2DF808F700831793 /* ViewModels */ = {
-			isa = PBXGroup;
-			children = (
-				FC53D64D2DF8090C00831793 /* ModelManager.swift */,
-				FC53D64B2DF808FF00831793 /* BenchmarkViewModel.swift */,
-			);
-			path = ViewModels;
-			sourceTree = "<group>";
-		};
-		FC53D6502DF8092000831793 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				FC53D65E2DF80A5F00831793 /* Models.swift */,
-				FC53D65D2DF80A2900831793 /* MainContentView.swift */,
-				FC53D6562DF8094E00831793 /* ComparisonView.swift */,
-				FC53D6552DF8094000831793 /* ResultsView.swift */,
-				FC53D6532DF8093200831793 /* BenchmarkView.swift */,
-				FC53D6522DF8092C00831793 /* ModelSelectionView.swift */,
-				FC53D6512DF8092500831793 /* ContentView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		FC53D6572DF8095500831793 /* Utils */ = {
-			isa = PBXGroup;
-			children = (
-				FC53D65C2DF8099900831793 /* SampleTexts.swift */,
-				FC53D65A2DF8098B00831793 /* DataExporter.swift */,
-				FC53D6582DF8096300831793 /* PerformanceMetrics.swift */,
-			);
-			path = Utils;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -145,6 +111,13 @@
 				FC53D6402DF8080700831793 /* MLXFast */,
 				FC53D6422DF8080700831793 /* MLXLinalg */,
 				FC53D6442DF8080700831793 /* MLXNN */,
+				FC53D6C12DF8178D00831793 /* MLXEmbedders */,
+				FC53D6C32DF8178D00831793 /* MLXLLM */,
+				FC53D6C52DF8178D00831793 /* MLXLMCommon */,
+				FC53D6C72DF8178D00831793 /* MLXMNIST */,
+				FC53D6C92DF8178D00831793 /* MLXVLM */,
+				FC09B08E2DF96CDF00DDEBF7 /* ArgumentParser */,
+				FC09B0902DF96CDF00DDEBF7 /* generate-manual */,
 			);
 			productName = SummarizationBenchmark;
 			productReference = FC53D6252DF807A100831793 /* SummarizationBenchmark.app */;
@@ -176,6 +149,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				FC53D63B2DF8080700831793 /* XCRemoteSwiftPackageReference "mlx-swift" */,
+				FC53D6C02DF8178D00831793 /* XCRemoteSwiftPackageReference "mlx-swift-examples" */,
+				FC09B08D2DF96CDF00DDEBF7 /* XCRemoteSwiftPackageReference "swift-argument-parser" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = FC53D6262DF807A100831793 /* Products */;
@@ -337,6 +312,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SummarizationBenchmark/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -362,6 +338,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = SummarizationBenchmark/Info.plist;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -400,6 +377,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		FC09B08D2DF96CDF00DDEBF7 /* XCRemoteSwiftPackageReference "swift-argument-parser" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-argument-parser.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 1.5.1;
+			};
+		};
 		FC53D63B2DF8080700831793 /* XCRemoteSwiftPackageReference "mlx-swift" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/ml-explore/mlx-swift";
@@ -408,9 +393,27 @@
 				minimumVersion = 0.25.4;
 			};
 		};
+		FC53D6C02DF8178D00831793 /* XCRemoteSwiftPackageReference "mlx-swift-examples" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/ml-explore/mlx-swift-examples";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.25.4;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		FC09B08E2DF96CDF00DDEBF7 /* ArgumentParser */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC09B08D2DF96CDF00DDEBF7 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
+			productName = ArgumentParser;
+		};
+		FC09B0902DF96CDF00DDEBF7 /* generate-manual */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC09B08D2DF96CDF00DDEBF7 /* XCRemoteSwiftPackageReference "swift-argument-parser" */;
+			productName = "generate-manual";
+		};
 		FC53D63C2DF8080700831793 /* MLX */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = FC53D63B2DF8080700831793 /* XCRemoteSwiftPackageReference "mlx-swift" */;
@@ -435,6 +438,31 @@
 			isa = XCSwiftPackageProductDependency;
 			package = FC53D63B2DF8080700831793 /* XCRemoteSwiftPackageReference "mlx-swift" */;
 			productName = MLXNN;
+		};
+		FC53D6C12DF8178D00831793 /* MLXEmbedders */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC53D6C02DF8178D00831793 /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXEmbedders;
+		};
+		FC53D6C32DF8178D00831793 /* MLXLLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC53D6C02DF8178D00831793 /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLLM;
+		};
+		FC53D6C52DF8178D00831793 /* MLXLMCommon */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC53D6C02DF8178D00831793 /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXLMCommon;
+		};
+		FC53D6C72DF8178D00831793 /* MLXMNIST */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC53D6C02DF8178D00831793 /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXMNIST;
+		};
+		FC53D6C92DF8178D00831793 /* MLXVLM */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = FC53D6C02DF8178D00831793 /* XCRemoteSwiftPackageReference "mlx-swift-examples" */;
+			productName = MLXVLM;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};

@@ -4,6 +4,8 @@
 //
 //  Created by Nikolay Petrov on 10.06.2025.
 //
+import MLX
+import SwiftUI
 
 // NewSessionView.swift
 struct NewSessionView: View {

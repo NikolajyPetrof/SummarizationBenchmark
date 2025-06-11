@@ -19,20 +19,33 @@ class BenchmarkViewModel: ObservableObject {
     @Published var currentResult: BenchmarkResult?
     @Published var sessions: [BenchmarkSession] = []
     @Published var currentSession: BenchmarkSession?
+    @Published var errorMessage: String?
     
     private let modelManager = ModelManager()
+    private let sessionManager = BenchmarkSessionManager()
     
-    func startNewSession(name: String) {
+    init() {
+        loadSessions()
+    }
+    
+    func startNewSession(name: String, type: BenchmarkSession.SessionType = .custom) {
         currentSession = BenchmarkSession(
             name: name,
             timestamp: Date(),
-            results: []
+            results: [],
+            sessionType: type
         )
+        
+        // Сохраняем сессию в список
+        if let session = currentSession {
+            sessions.append(session)
+            saveSessionsToFile()
+        }
     }
     
     func runBenchmark(text: String, model: SummarizationModel) async throws {
         guard let container = modelManager.loadedModels[model.modelId] else {
-            throw BenchmarkError.modelNotLoaded
+            throw SummarizerError.modelNotLoaded
         }
         
         isGenerating = true
@@ -116,16 +129,59 @@ class BenchmarkViewModel: ObservableObject {
     }
     
     private func saveSessionsToFile() {
-        // Реализация сохранения
-        if let data = try? JSONEncoder().encode(sessions) {
-            let url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-                .appendingPathComponent("benchmark_sessions.json")
-            try? data.write(to: url)
+        sessionManager.saveSessions(sessions)
+    }
+    
+    /// Получает текущее использование памяти GPU в мегабайтах
+    private func getCurrentMemoryUsage() -> Double {
+        return Double(modelManager.getMemoryInfo().used) / (1024 * 1024) // Конвертируем в MB
+    }
+    
+    func loadSessions() {
+        sessions = sessionManager.loadSessions()
+        
+        if let lastSession = sessions.last {
+            currentSession = lastSession
         }
+    }
+    
+    func clearCurrentResult() {
+        currentResult = nil
+        generatedSummary = ""
+        errorMessage = nil
+    }
+    
+    func deleteSession(_ session: BenchmarkSession) {
+        sessions.removeAll { $0.id == session.id }
+        if currentSession?.id == session.id {
+            currentSession = nil
+        }
+        saveSessionsToFile()
+    }
+    
+    func exportResults(from session: BenchmarkSession) -> URL? {
+        return sessionManager.exportSessionAsCSV(session)
     }
 }
 
-enum BenchmarkError: Error {
+// MARK: - Errors
+
+enum SummarizerError: Error, LocalizedError {
     case modelNotLoaded
-    case generationFailed
+    case generationFailed(String)
+    case invalidInput
+    case memoryError
+    
+    var errorDescription: String? {
+        switch self {
+        case .modelNotLoaded:
+            return "Модель не загружена. Пожалуйста, загрузите модель перед генерацией."
+        case .generationFailed(let message):
+            return "Ошибка генерации: \(message)"
+        case .invalidInput:
+            return "Некорректный входной текст. Пожалуйста, проверьте ввод."
+        case .memoryError:
+            return "Ошибка памяти. Недостаточно GPU памяти для выполнения операции."
+        }
+    }
 }
