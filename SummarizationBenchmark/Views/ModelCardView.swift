@@ -73,7 +73,8 @@ struct ModelCardView: View {
                         Button("Load") {
                             onLoad()
                         }
-                        .buttonStyle(.borderless)
+                        .buttonStyle(.borderedProminent)
+                        .tint(.green)
                         .controlSize(.mini)
                         .disabled(isLoading)
                     }
@@ -119,7 +120,7 @@ struct ModelCardView: View {
         if isSelected {
             return Color.blue.opacity(0.1)
         } else {
-            return Color(.tertiarySystemBackground)
+            return Color(NSColor.tertiarySystemFill)
         }
     }
 }

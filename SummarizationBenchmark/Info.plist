@@ -6,5 +6,12 @@
 	<string>false</string>
 	<key>com.apple.developer.kernel.increased-memory-limit</key>
 	<string>true</string>
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<true/>
+	</dict>
+	<key>com.apple.security.network.client</key>
+	<true/>
 </dict>
 </plist>

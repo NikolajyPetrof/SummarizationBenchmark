@@ -8,7 +8,8 @@
 import XCTest
 @testable import SummarizationBenchmark
 import MLX
-import MLXTransformers
+import MLXLLM
+import MLXLMCommon
 
 /// Tests for summarization pipeline with real articles
 class SummarizationPipelineTests: XCTestCase {

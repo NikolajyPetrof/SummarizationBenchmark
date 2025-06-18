@@ -75,102 +75,9 @@ struct SidebarView: View {
     }
 }
 
-// MARK: - Model Card для каждой модели
-struct ModelCardView: View {
-    let model: SummarizationModel
-    let isLoaded: Bool
-    let isSelected: Bool
-    let isLoading: Bool
-    let loadingProgress: Double
-    let onSelect: () -> Void
-    let onLoad: () -> Void
-    let onUnload: () -> Void
-    
-    var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            // Model Header
-            HStack {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(model.name)
-                        .font(.headline)
-                        .foregroundColor(isSelected ? .white : .primary)
-                    
-                    HStack {
-                        Text(model.size.rawValue)
-                            .font(.caption)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 2)
-                            .background(model.size == .small ? Color.green : Color.orange)
-                            .foregroundColor(.white)
-                            .cornerRadius(4)
-                        
-                        Text("~\(String(format: "%.1f", model.size.expectedMemory))GB")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                }
-                
-                Spacer()
-                
-                // Status Indicator
-                Circle()
-                    .fill(isLoaded ? Color.green : Color.gray)
-                    .frame(width: 12, height: 12)
-            }
-            
-            // Loading Progress
-            if isLoading {
-                VStack(alignment: .leading, spacing: 4) {
-                    ProgressView(value: loadingProgress)
-                        .progressViewStyle(LinearProgressViewStyle())
-                    Text("\(Int(loadingProgress * 100))%")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
-            }
-            
-            // Action Buttons
-            HStack {
-                if isLoaded {
-                    Button("Unload") {
-                        onUnload()
-                    }
-                    .buttonStyle(.bordered)
-                    .foregroundColor(.red)
-                } else {
-                    Button("Load") {
-                        onLoad()
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .disabled(isLoading)
-                }
-                
-                Spacer()
-                
-                if isLoaded {
-                    Button("Select") {
-                        onSelect()
-                    }
-                    .buttonStyle(isSelected ? .borderedProminent : .bordered)
-                    .disabled(isSelected)
-                }
-            }
-        }
-        .padding()
-        .background(
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isSelected ? Color.accentColor : Color(NSColor.controlColor))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 12)
-                .stroke(isLoaded ? Color.green : Color.clear, lineWidth: 2)
-        )
-    }
-}
-
 // MARK: - Memory Info View
 struct MemoryInfoView: View {
-    @State private var memoryInfo = MLX.GPU.memoryInfo()
+    @State private var memoryInfo = (used: 0, total: MLX.GPU.cacheLimit)
     @State private var timer: Timer?
     
     var body: some View {
@@ -211,7 +118,7 @@ struct MemoryInfoView: View {
     
     private func startMemoryMonitoring() {
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            memoryInfo = MLX.GPU.memoryInfo()
+            memoryInfo = (used: MLX.GPU.memoryLimit, total: MLX.GPU.cacheLimit)
         }
     }
 }
@@ -693,4 +600,3 @@ enum TextPreset: String, CaseIterable {
         content.components(separatedBy: .whitespacesAndNewlines).filter { !$0.isEmpty }.count
     }
 }
-

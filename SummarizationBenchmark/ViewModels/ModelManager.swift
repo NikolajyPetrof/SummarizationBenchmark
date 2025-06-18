@@ -12,7 +12,7 @@ import MLXLMCommon
 
 @MainActor
 class ModelManager: ObservableObject {
-    @Published var loadedModels: [String: LLMModelContainer] = [:]
+    @Published var loadedModels: [String: ModelContainer] = [:]
     @Published var isLoading = false
     @Published var loadingProgress: Double = 0.0
     @Published var loadingStatus = ""
@@ -39,17 +39,26 @@ class ModelManager: ObservableObject {
         let task = Task { @MainActor in
             do {
                 // Настройка памяти GPU в зависимости от размера модели
-                let memoryLimit = Int(Double(model.memoryRequirement) * 0.8 * 1024 * 1024) // 80% от ожидаемого в MB
-                MLX.Device.setCacheLimit(memoryLimit)
+                // Break up complex expression into simpler sub-expressions
+                let baseMemoryRequirement = Double(model.memoryRequirement) ?? 0
+                let scaledMemoryRequirement = baseMemoryRequirement * 0.8
+                let memoryRequirementMB = scaledMemoryRequirement * 1024 * 1024
+                let memoryLimit = Int(memoryRequirementMB) // 80% от ожидаемого в MB
+                MLX.GPU.set(cacheLimit: memoryLimit)
                 
-                // Создаем MLX конфигурацию
-                let mlxConfig = MLXLLM.ModelConfiguration(id: model.modelId)
+                // Создаем LLM конфигурацию
+                let llmConfig = MLXLMCommon.ModelConfiguration(
+                    id: model.modelId,
+                    defaultPrompt: model.configuration.defaultPrompt
+                )
                 
                 let container = try await LLMModelFactory.shared.loadContainer(
-                    configuration: mlxConfig
+                    configuration: llmConfig
                 ) { [weak self] progress in
                     Task { @MainActor in
-                        self?.loadingProgress = Double(progress.completedUnitCount) / Double(progress.totalUnitCount)
+                        // Ограничиваем значение прогресса в диапазоне от 0 до 1
+                        let clampedProgress = min(max(progress.fractionCompleted, 0.0), 1.0)
+                        self?.loadingProgress = clampedProgress
                     }
                 }
                 
@@ -57,7 +66,27 @@ class ModelManager: ObservableObject {
                 self.loadingProgress = 1.0
                 self.loadingStatus = "\(model.name) loaded successfully"
             } catch {
-                self.errorMessage = "Failed to load model: \(error.localizedDescription)"
+                // Улучшенная обработка сетевых ошибок
+                if let urlError = error as? URLError {
+                    switch urlError.code {
+                    case .notConnectedToInternet:
+                        self.errorMessage = "Отсутствует подключение к интернету. Проверьте соединение и попробуйте снова."
+                    case .cannotFindHost, .cannotConnectToHost:
+                        self.errorMessage = "Не удалось подключиться к серверу Hugging Face. Проверьте соединение или попробуйте позже."
+                    case .timedOut:
+                        self.errorMessage = "Превышено время ожидания ответа от сервера. Проверьте скорость соединения."
+                    default:
+                        self.errorMessage = "Сетевая ошибка: \(urlError.localizedDescription)"
+                    }
+                } else {
+                    self.errorMessage = "Ошибка загрузки модели: \(error.localizedDescription)"
+                }
+                
+                // Сбрасываем статус загрузки
+                self.loadingProgress = 0
+                self.loadingStatus = "Ошибка загрузки"
+                
+                print("Ошибка загрузки модели: \(error)")
             }
             
             self.loadingTasks[model.modelId] = nil
@@ -84,7 +113,7 @@ class ModelManager: ObservableObject {
         }
         
         // Очищаем память GPU
-        MLX.Device.defaultDevice.resetMemory()
+        MLX.GPU.resetPeakMemory()
     }
     
     func unloadAllModels() {
@@ -99,7 +128,7 @@ class ModelManager: ObservableObject {
         isLoading = false
         
         // Очищаем память GPU
-        MLX.Device.defaultDevice.resetMemory()
+        MLX.GPU.resetPeakMemory()
     }
     
     func isModelLoaded(_ modelId: String) -> Bool {
@@ -114,15 +143,20 @@ class ModelManager: ObservableObject {
     func getMemoryInfo() -> (used: Int, total: Int) {
         // В MLX Swift API пока нет прямого метода memoryInfo(),
         // поэтому будем использовать приближенные значения
-        let device = MLX.Device.defaultDevice
-        let total = device.cacheLimit
+        let device = MLX.GPU.self
+        let total = max(device.cacheLimit, 1) // Гарантируем, что total не равен 0
         
         // Использованная память - это приблизительно 80% от кэша для загруженных моделей
-        let used = loadedModelIds.reduce(0) { sum, modelId in
-            if let model = SummarizationModel.model(withId: modelId) {
-                return sum + Int(Double(model.memoryRequirement) * 0.8 * 1024 * 1024) // MB -> bytes
+        var used = 0
+        
+        for modelId in loadedModelIds {
+            if let model = SummarizationModel.model(withId: modelId),
+               let baseRequirement = Double(model.memoryRequirement),
+               baseRequirement.isFinite { // Проверяем, что значение конечное
+                let scaledRequirement = baseRequirement * 0.8
+                let bytesRequirement = scaledRequirement * 1024 * 1024 // MB -> bytes
+                used += Int(bytesRequirement)
             }
-            return sum
         }
         
         return (used: used, total: total)
@@ -136,8 +170,14 @@ class ModelManager: ObservableObject {
     // Общий размер загруженных моделей (приблизительно)
     var estimatedMemoryUsage: Double {
         let loadedModelSizes = loadedModelIds.compactMap { modelId in
-            SummarizationModel.model(withId: modelId)?.memoryRequirement
+            if let model = SummarizationModel.model(withId: modelId),
+               let memoryReq = Double(model.memoryRequirement) {
+                return memoryReq
+            }
+            return nil
         }
-        return loadedModelSizes.reduce(0, +)
+        return loadedModelSizes.reduce(0) { sum, value in
+            return sum + value
+        }
     }
 }

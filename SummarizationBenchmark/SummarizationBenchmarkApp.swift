@@ -7,7 +7,9 @@
 
 // MARK: - Main App File
 import SwiftUI
+import Foundation
 import MLX
+import MLXFast
 
 @main
 struct SummarizationBenchmarkApp: App {
@@ -33,18 +35,17 @@ struct SummarizationBenchmarkApp: App {
     
     private func setupMLX() {
         // Проверяем доступность GPU
-        if !MLX.GPU.isAvailable {
-            print("⚠️ Warning: Metal GPU not available. MLX may not work correctly.")
-        } else {
-            let memoryInfo = MLX.GPU.memoryInfo()
-            let totalGB = Double(memoryInfo.total) / (1024 * 1024 * 1024)
-            print("✅ MLX initialized successfully")
-            print("📊 GPU Memory: \(String(format: "%.1f", totalGB))GB total")
+//        if !MLX.GPU.isAvailable {
+//            print("⚠️ Warning: Metal GPU not available. MLX may not work correctly.")
+//        } else {
+//            let memoryInfo = MLX.GPU.memoryInfo()
+//            let totalGB = Double(memoryInfo.total) / (1024 * 1024 * 1024)
+//            print("✅ MLX initialized successfully")
+//            print("📊 GPU Memory: \(String(format: "%.1f", totalGB))GB total")
             
             // Устанавливаем разумный лимит кэша (70% от общей памяти)
-            let cacheLimit = Int(Double(memoryInfo.total) * 0.7)
-            MLX.GPU.set(cacheLimit: cacheLimit)
-        }
+            MLX.GPU.set(cacheLimit: 20 * 1024 * 1024)
+//        }
     }
     
     private func setupAppearance() {
@@ -127,16 +128,16 @@ struct AppCommands: Commands {
 }
 
 // MARK: - Helper Extensions
-extension MLX.GPU {
-    static var memoryUsagePercentage: Double {
-        let info = memoryInfo()
-        return Double(info.used) / Double(info.total)
-    }
-    
-    static var memoryUsageString: String {
-        let info = memoryInfo()
-        let usedGB = Double(info.used) / (1024 * 1024 * 1024)
-        let totalGB = Double(info.total) / (1024 * 1024 * 1024)
-        return String(format: "%.1fGB / %.1fGB", usedGB, totalGB)
-    }
-}
+//extension MLX.GPU {
+//    static var memoryUsagePercentage: Double {
+//        let info = memoryInfo()
+//        return Double(info.used) / Double(info.total)
+//    }
+//    
+//    static var memoryUsageString: String {
+//        let info = memoryInfo()
+//        let usedGB = Double(info.used) / (1024 * 1024 * 1024)
+//        let totalGB = Double(info.total) / (1024 * 1024 * 1024)
+//        return String(format: "%.1fGB / %.1fGB", usedGB, totalGB)
+//    }
+//}

@@ -8,7 +8,8 @@
 import XCTest
 @testable import SummarizationBenchmark
 import MLX
-import MLXTransformers
+import MLXLLM
+import MLXLMCommon
 import Darwin
 
 /// Performance benchmark tests for summarization models

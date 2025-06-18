@@ -6,7 +6,7 @@
 //
 
 import Foundation
-import MLXTransformers
+import MLXLLM
 
 /// A registry of available models with their local paths
 public struct ModelRegistry {

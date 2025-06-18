@@ -8,7 +8,8 @@
 import XCTest
 @testable import SummarizationBenchmark
 import MLX
-import MLXTransformers
+import MLXLLM
+import MLXLMCommon
 
 /// Tests for model loading and basic generation functionality
 class ModelLoadingTests: XCTestCase {

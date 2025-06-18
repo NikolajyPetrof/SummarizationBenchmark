@@ -9,11 +9,10 @@ import Foundation
 import ArgumentParser
 import MLX
 import MLXFast
-import MLXTransformers
+//import MLXTransformers
 
 /// Command-line tool for summarization tasks
-@main
-struct SummarizationRunner: ParsableCommand {
+struct SummarizationRunner: AsyncParsableCommand {
     static var configuration = CommandConfiguration(
         commandName: "summarize",
         abstract: "Run text summarization with MLX models",
@@ -21,7 +20,7 @@ struct SummarizationRunner: ParsableCommand {
     )
     
     /// Set the model directory when the tool is initialized
-    static func main() {
+    static func main() async {
         // Allow custom model directory through environment variable
         if let customModelDirPath = ProcessInfo.processInfo.environment["SUMMARIZATION_MODEL_DIR"] {
             let customModelDir = URL(fileURLWithPath: customModelDirPath)
@@ -30,14 +29,14 @@ struct SummarizationRunner: ParsableCommand {
         }
         
         // Run the command
-        SummarizationRunner.main()
+        await SummarizationRunner.main()
     }
 }
 
 // MARK: - Summarize Command
 extension SummarizationRunner {
     /// Command to summarize text
-    struct Summarize: ParsableCommand {
+    struct Summarize: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
             commandName: "summarize",
             abstract: "Summarize text using a specified model"
@@ -58,7 +57,7 @@ extension SummarizationRunner {
         @Flag(name: .shortAndLong, help: "Output detailed performance stats")
         var verbose: Bool = false
         
-        func run() throws {
+        func run() async throws {
             // Load text
             let inputText: String
             if let path = inputFile {
@@ -79,7 +78,7 @@ extension SummarizationRunner {
             
             // Run summarization
             print("⏳ Generating summary...")
-            let result = try pipeline.summarize(
+            let result = try await pipeline.summarize(
                 text: inputText,
                 maxTokens: maxTokens,
                 temperature: temperature
@@ -164,7 +163,7 @@ extension SummarizationRunner {
 // MARK: - Benchmark Command
 extension SummarizationRunner {
     /// Command to benchmark model performance
-    struct BenchmarkModel: ParsableCommand {
+    struct BenchmarkModel: AsyncParsableCommand {
         static var configuration = CommandConfiguration(
             commandName: "benchmark",
             abstract: "Benchmark model performance on summarization tasks"
@@ -182,7 +181,7 @@ extension SummarizationRunner {
         @Flag(name: .shortAndLong, help: "Output results in JSON format")
         var json: Bool = false
         
-        func run() throws {
+        func run() async throws {
             // Load model pipeline
             print("🔄 Loading model: \(model)...")
             let pipeline = try SummarizationPipeline(modelId: model)
@@ -208,7 +207,7 @@ extension SummarizationRunner {
             for (i, sample) in samples.enumerated() {
                 print("Processing sample \(i+1)/\(samples.count)...")
                 
-                let result = try pipeline.summarize(text: sample.text)
+                let result = try await pipeline.summarize(text: sample.text)
                 results.append(result)
                 
                 totalTime += result.inferenceTime

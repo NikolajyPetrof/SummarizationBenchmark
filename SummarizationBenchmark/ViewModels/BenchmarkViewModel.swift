@@ -31,9 +31,8 @@ class BenchmarkViewModel: ObservableObject {
     func startNewSession(name: String, type: BenchmarkSession.SessionType = .custom) {
         currentSession = BenchmarkSession(
             name: name,
-            timestamp: Date(),
-            results: [],
-            sessionType: type
+            type: type,
+            results: []
         )
         
         // Сохраняем сессию в список
@@ -58,49 +57,61 @@ class BenchmarkViewModel: ObservableObject {
             let summary = try await container.perform { context in
                 let input = try await context.processor.prepare(input: .init(prompt: prompt))
                 
-                return try MLXLMCommon.generate(
+                let generateStream = try MLXLMCommon.generate(
                     input: input,
                     parameters: GenerateParameters(
+                        maxTokens: 200,
                         temperature: 0.7,
                         topP: 0.9,
-                        repetitionPenalty: 1.1,
-                        maxTokens: 200
+                        repetitionPenalty: 1.1
                     ),
                     context: context
-                ) { tokens in
-                    // Можно добавить callback для отображения прогресса
-                    return .more
+                )
+                
+                var localGeneratedText = ""
+                var localTokenCount = 0
+                
+                for await generation in generateStream {
+                    if let chunk = generation.chunk {
+                        localGeneratedText += chunk
+                        localTokenCount += 1
+                    }
                 }
+                
+                return (localGeneratedText, localTokenCount)
             }
             
             let endTime = CFAbsoluteTimeGetCurrent()
             let memoryAfter = getCurrentMemoryUsage()
             
             let inferenceTime = endTime - startTime
-            let tokensCount = summary.split(separator: " ").count
+            let tokensCount = summary.1
             let tokensPerSecond = Double(tokensCount) / inferenceTime
             let memoryUsed = memoryAfter - memoryBefore
-            let compressionRatio = Double(summary.count) / Double(text.count)
+            let compressionRatio = Double(summary.0.count) / Double(text.count)
             
             let metrics = BenchmarkResult.PerformanceMetrics(
                 loadTime: 0, // Будем измерять отдельно
                 inferenceTime: inferenceTime,
                 tokensPerSecond: tokensPerSecond,
                 memoryUsed: memoryUsed,
-                summaryLength: summary.count,
-                compressionRatio: compressionRatio
+                summaryLength: summary.0.count,
+                compressionRatio: compressionRatio,
+                inputLength: text.count,
+                tokensGenerated: tokensCount
             )
             
             let result = BenchmarkResult(
                 timestamp: Date(),
                 modelName: model.name,
+                modelId: model.modelId,
                 inputText: text,
-                generatedSummary: summary,
+                generatedSummary: summary.0,
                 metrics: metrics
             )
             
             currentResult = result
-            generatedSummary = summary
+            generatedSummary = summary.0
             
             // Добавляем в текущую сессию
             if var session = currentSession {
@@ -116,8 +127,7 @@ class BenchmarkViewModel: ObservableObject {
     }
     
     private func getCurrentMemoryUsage() -> Double {
-        let memoryInfo = MLX.GPU.memoryInfo()
-        return Double(memoryInfo.used) / (1024 * 1024) // MB
+        return Double(modelManager.getMemoryInfo().used) / (1024 * 1024) // Конвертируем в MB
     }
     
     func saveSession() {
@@ -130,11 +140,6 @@ class BenchmarkViewModel: ObservableObject {
     
     private func saveSessionsToFile() {
         sessionManager.saveSessions(sessions)
-    }
-    
-    /// Получает текущее использование памяти GPU в мегабайтах
-    private func getCurrentMemoryUsage() -> Double {
-        return Double(modelManager.getMemoryInfo().used) / (1024 * 1024) // Конвертируем в MB
     }
     
     func loadSessions() {

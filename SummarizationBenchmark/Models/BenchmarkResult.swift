@@ -138,7 +138,7 @@ enum MemoryCategory: String, CaseIterable {
 
 // MARK: - Benchmark Session
 struct BenchmarkSession: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     let timestamp: Date
     var results: [BenchmarkResult]

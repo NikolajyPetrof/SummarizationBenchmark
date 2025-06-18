@@ -9,11 +9,11 @@ import Foundation
 import MLX
 import MLXFast
 import MLXRandom
-import MLXTransformers
+import MLXLLM
+import MLXLMCommon
 
 public class SummarizationPipeline {
-    private let model: Model
-    private let tokenizer: Tokenizer
+    private var modelContainer: ModelContainer?
     private let configuration: ModelConfiguration
     
     private var modelId: String { configuration.id }
@@ -27,6 +27,13 @@ public class SummarizationPipeline {
     private var memoryBefore: UInt64 = 0
     private var memoryAfter: UInt64 = 0
     
+    enum LoadState {
+        case idle
+        case loaded(ModelContainer)
+    }
+    
+    private var loadState = LoadState.idle
+    
     /// Creates a new summarization pipeline from a model ID
     /// - Parameter modelId: ID of the model to load
     public init(modelId: String) throws {
@@ -35,31 +42,69 @@ public class SummarizationPipeline {
         }
         
         self.configuration = modelConfiguration
-        
-        // Get model paths from registry
-        let modelInfo = try ModelRegistry.getModelInfo(for: modelId)
-        
-        // Load tokenizer
-        self.tokenizer = try Tokenizer(modelInfo.tokenizerPath)
-        
-        // Load model
-        self.model = try Model.load(modelInfo.modelPath)
-        
-        print("✅ Loaded model: \(modelId)")
-        print("📝 Model directory: \(modelInfo.modelPath.deletingLastPathComponent().path)")
+        print("🔧 Initialized pipeline for model: \(modelId)")
+    }
+    
+    /// Load and return the model -- can be called multiple times
+    private func load() async throws -> ModelContainer {
+        switch loadState {
+        case .idle:
+            // Limit the buffer cache
+            MLX.GPU.set(cacheLimit: 20 * 1024 * 1024)
+            
+            // Use a pre-defined model configuration based on our model ID
+            let modelConfiguration: MLXLMCommon.ModelConfiguration
+            
+            // Map our model IDs to LLMRegistry configurations
+            switch configuration.id {
+            case "microsoft/Phi-3.5-mini-instruct-4bit":
+                modelConfiguration = LLMRegistry.phi3_5_4bit
+            case "Qwen/Qwen2.5-1.5B-Instruct-4bit":
+                modelConfiguration = LLMRegistry.qwen2_5_1_5b
+            case "Qwen/Qwen2.5-7B-Instruct-4bit":
+                modelConfiguration = LLMRegistry.qwen2_5_7b
+            case "microsoft/Phi-3-mini-4k-instruct-4bit":
+                modelConfiguration = LLMRegistry.phi4bit
+            default:
+                // Create a custom configuration for unknown models
+                modelConfiguration = MLXLMCommon.ModelConfiguration(
+                    id: configuration.id,
+                    defaultPrompt: configuration.defaultPrompt
+                )
+            }
+            
+            let modelContainer = try await LLMModelFactory.shared.loadContainer(
+                configuration: modelConfiguration
+            ) { progress in
+                Task { @MainActor in 
+                    print("📥 Downloading \(self.configuration.id): \(Int(progress.fractionCompleted * 100))%")
+                }
+            }
+            
+            let numParams = await modelContainer.perform { context in
+                context.model.numParameters()
+            }
+            
+            print("✅ Loaded \(configuration.id). Weights: \(numParams / (1024*1024))M")
+            loadState = .loaded(modelContainer)
+            return modelContainer
+            
+        case .loaded(let modelContainer):
+            return modelContainer
+        }
     }
     
     /// Generates a summary for the given text
     /// - Parameters:
-    ///   - text: The text to summarize
-    ///   - maxTokens: Maximum number of tokens to generate (overrides model config if provided)
-    ///   - temperature: Temperature for generation (overrides model config if provided)
-    /// - Returns: The generated summary
+    ///   - text: Input text to summarize
+    ///   - maxTokens: Optional maximum tokens to generate
+    ///   - temperature: Optional temperature for generation
+    /// - Returns: Summary result with performance metrics
     public func summarize(
         text: String,
         maxTokens: Int? = nil,
         temperature: Float? = nil
-    ) throws -> SummarizationResult {
+    ) async throws -> SummarizationResult {
         // Capture starting memory usage
         memoryBefore = memoryUsage()
         
@@ -69,31 +114,52 @@ public class SummarizationPipeline {
         let maxLen = maxTokens ?? configuration.maxTokens
         let temp = temperature ?? configuration.temperature
         
-        // Tokenize the prompt
-        var tokens = try tokenizer.encode(prompt)
+        // Load model
+        let modelContainer = try await load()
         
         // Start timing
         let startTime = Date()
         
-        // Generate tokens
-        let generatedTokens = model.generate(
-            input: tokens,
-            maxLength: maxLen,
-            temperature: Tensor(temp),
-            extraEosTokens: configuration.extraEOSTokens.compactMap({ UInt32(tokenizer.encodeSingleToken($0)) }),
-            topK: nil,
-            topP: nil
-        )
+        // Set random seed for reproducible generation
+        MLXRandom.seed(UInt64(Date.timeIntervalSinceReferenceDate * 1000))
+        
+        let (generatedText, tokenCount) = try await modelContainer.perform { (context: ModelContext) -> (String, Int) in
+            let lmInput = try await context.processor.prepare(input: UserInput(chat: [
+                .system("You are a helpful assistant that provides concise summaries."),
+                .user(prompt)
+            ]))
+            
+            let generateParameters = GenerateParameters(
+                maxTokens: maxLen, 
+                temperature: temp,
+                topP: 0.9
+            )
+            
+            let stream = try MLXLMCommon.generate(
+                input: lmInput, parameters: generateParameters, context: context)
+            
+            var localGeneratedText = ""
+            var localTokenCount = 0
+            
+            for await generation in stream {
+                if let chunk = generation.chunk {
+                    localGeneratedText += chunk
+                    localTokenCount += 1
+                }
+            }
+            
+            return (localGeneratedText, localTokenCount)
+        }
         
         // Calculate inference time
-        lastInferenceTime = -startTime.timeIntervalSinceNow
+        lastInferenceTime = Date().timeIntervalSince(startTime)
         
-        // Decode generated tokens
-        let generatedText = try tokenizer.decode(generatedTokens)
+        // Clean up generated text
+        let cleanedGeneratedText = generatedText
             .trimmingCharacters(in: .whitespacesAndNewlines)
         
         // Calculate tokens per second
-        totalTokensGenerated = generatedTokens.count
+        totalTokensGenerated = tokenCount
         tokensPerSecond = Double(totalTokensGenerated) / lastInferenceTime
         
         // Capture ending memory usage
@@ -101,7 +167,7 @@ public class SummarizationPipeline {
         
         return SummarizationResult(
             originalText: text,
-            summary: generatedText,
+            summary: cleanedGeneratedText,
             modelId: modelId,
             inferenceTime: lastInferenceTime,
             tokensPerSecond: tokensPerSecond,
