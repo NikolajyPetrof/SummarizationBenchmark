@@ -24,7 +24,6 @@
 			isa = PBXFileSystemSynchronizedBuildFileExceptionSet;
 			membershipExceptions = (
 				Info.plist,
-				Utils/PerformanceMetrics.swift,
 			);
 			target = FC53D6242DF807A100831793 /* SummarizationBenchmark */;
 		};

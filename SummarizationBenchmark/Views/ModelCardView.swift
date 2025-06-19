@@ -13,9 +13,16 @@ struct ModelCardView: View {
     let isSelected: Bool
     let isLoading: Bool
     let loadingProgress: Double
+    let hasError: Bool
+    let errorMessage: String?
+    let generatedSummary: String?
+    let metrics: (time: Double, tokensPerSecond: Double, compressionRatio: Double)?
     let onSelect: () -> Void
     let onLoad: () -> Void
     let onUnload: () -> Void
+    
+    @State private var isShowingSummary = false
+    @State private var isShowingError = false
     
     var body: some View {
         Button(action: onSelect) {
@@ -87,6 +94,116 @@ struct ModelCardView: View {
                         .frame(width: 8, height: 8)
                 }
                 .padding(.top, 4)
+                
+                // Show summary section if available
+                if let summary = generatedSummary, isShowingSummary {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Divider()
+                            .padding(.vertical, 4)
+                        
+                        Text("Summary:")
+                            .font(.caption)
+                            .bold()
+                            .foregroundColor(.primary)
+                        
+                        Text(summary)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(4)
+                            .transition(.opacity)
+                        
+                        if let metrics = metrics {
+                            HStack(spacing: 12) {
+                                VStack(alignment: .leading) {
+                                    Text("\(String(format: "%.2f", metrics.time))s")
+                                        .font(.caption2)
+                                        .bold()
+                                    Text("Time")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                VStack(alignment: .leading) {
+                                    Text("\(Int(metrics.tokensPerSecond))")
+                                        .font(.caption2)
+                                        .bold()
+                                    Text("Tokens/s")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                                
+                                VStack(alignment: .leading) {
+                                    Text("\(Int(metrics.compressionRatio * 100))%")
+                                        .font(.caption2)
+                                        .bold()
+                                    Text("Compression")
+                                        .font(.caption2)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            .padding(.top, 4)
+                        }
+                    }
+                    .animation(.easeInOut, value: isShowingSummary)
+                }
+                
+                // Show error section if available
+                if let error = errorMessage, isShowingError {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Divider()
+                            .padding(.vertical, 4)
+                        
+                        Text("Error:")
+                            .font(.caption)
+                            .bold()
+                            .foregroundColor(.primary)
+                        
+                        Text(error)
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                            .lineLimit(4)
+                            .transition(.opacity)
+                    }
+                    .animation(.easeInOut, value: isShowingError)
+                }
+                
+                // Toggle summary button
+                if generatedSummary != nil {
+                    Button(action: {
+                        withAnimation {
+                            isShowingSummary.toggle()
+                        }
+                    }) {
+                        HStack {
+                            Text(isShowingSummary ? "Hide Summary" : "Show Summary")
+                                .font(.caption)
+                            Image(systemName: isShowingSummary ? "chevron.up" : "chevron.down")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.top, 2)
+                    }
+                    .buttonStyle(.borderless)
+                }
+                
+                // Toggle error button
+                if errorMessage != nil {
+                    Button(action: {
+                        withAnimation {
+                            isShowingError.toggle()
+                        }
+                    }) {
+                        HStack {
+                            Text(isShowingError ? "Hide Error" : "Show Error")
+                                .font(.caption)
+                            Image(systemName: isShowingError ? "chevron.up" : "chevron.down")
+                                .font(.caption2)
+                        }
+                        .foregroundColor(.blue)
+                        .padding(.top, 2)
+                    }
+                    .buttonStyle(.borderless)
+                }
             }
             .padding(10)
             .background(cardBackgroundColor)
@@ -111,6 +228,8 @@ struct ModelCardView: View {
             return .yellow
         } else if isLoaded {
             return .green
+        } else if hasError {
+            return .red
         } else {
             return .gray
         }
@@ -133,6 +252,10 @@ struct ModelCardView: View {
             isSelected: true,
             isLoading: false,
             loadingProgress: 0,
+            hasError: false,
+            errorMessage: nil,
+            generatedSummary: "This is a sample summary generated by the model. It provides a concise overview of the input text.",
+            metrics: (time: 1.23, tokensPerSecond: 45.6, compressionRatio: 0.25),
             onSelect: {},
             onLoad: {},
             onUnload: {}
@@ -144,6 +267,10 @@ struct ModelCardView: View {
             isSelected: false,
             isLoading: true,
             loadingProgress: 0.7,
+            hasError: true,
+            errorMessage: "An error occurred while loading the model.",
+            generatedSummary: nil,
+            metrics: nil,
             onSelect: {},
             onLoad: {},
             onUnload: {}

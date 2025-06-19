@@ -15,6 +15,9 @@ struct ModelConfiguration: Identifiable, Hashable {
     let maxTokens: Int
     let additionalMetadata: [String: String]
     
+    /// Default summarization prompt that can be used across all models
+    static let defaultSummarizationPrompt = "You are an expert in text summarization. Your task is to create an accurate and concise summary while preserving the original language and key information.\n\nInstructions:\n1. Identify the language of the original text\n2. Create a summary in THE SAME language as the source text\n3. Preserve cultural context and proper names in their original spelling\n4. Focus on main arguments, key evidence, and practical conclusions\n5. Ensure factual accuracy - do not add external information\n\nLength: Approximately 20-30% of the original text\nSummary structure:\n- Main ideas\n- Key facts/data\n- Conclusions/recommendations\n\nText to summarize:\n\"{INSERT_TEXT}\"\n\nSummary in the original language:"
+    
     init(
         id: String,
         defaultPrompt: String,
@@ -43,7 +46,13 @@ struct ModelConfiguration: Identifiable, Hashable {
     
     // Utility methods
     func createPrompt(for text: String) -> String {
-        return "\(defaultPrompt)\n\n\(text)\n\nSummary:"
+        if defaultPrompt.isEmpty {
+            // Use the static default prompt if no specific prompt is provided
+            return ModelConfiguration.defaultSummarizationPrompt.replacingOccurrences(of: "{INSERT_TEXT}", with: text)
+        } else {
+            // Use the model-specific prompt if provided
+            return "\(defaultPrompt)\n\n\(text)\n\nSummary:"
+        }
     }
     
     var isValid: Bool {
