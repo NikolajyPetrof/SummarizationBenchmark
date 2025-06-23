@@ -12,6 +12,7 @@ import MLXLMCommon
 
 @MainActor
 class ModelManager: ObservableObject {
+    
     @Published var loadedModels: [String: ModelContainer] = [:]
     @Published var isLoading = false
     @Published var loadingProgress: Double = 0.0

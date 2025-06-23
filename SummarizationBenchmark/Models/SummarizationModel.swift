@@ -16,11 +16,13 @@ struct SummarizationModel: Identifiable, Hashable {
     
     enum ModelSize: String, CaseIterable {
         case small = "1.5B"
+        case middle = "3B"
         case large = "8B"
         
         var expectedMemory: Double {
             switch self {
             case .small: return 2.0  // GB
+            case .middle: return 3.0  // GB
             case .large: return 8.0  // GB
             }
         }
@@ -28,7 +30,8 @@ struct SummarizationModel: Identifiable, Hashable {
         var color: String {
             switch self {
             case .small: return "green"
-            case .large: return "orange"
+            case .middle: return "yellow"
+            case .large: return "red"
             }
         }
     }
@@ -65,7 +68,7 @@ extension SummarizationModel {
                 size: .small,
                 configuration: ModelConfiguration(
                     id: "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B",
-                    defaultPrompt: "",
+                    defaultPrompt: "Summarize",
                     extraEOSTokens: ["<|end|>"],
                     temperature: 0.6,
                     maxTokens: 200,
@@ -84,7 +87,7 @@ extension SummarizationModel {
                 size: .large,
                 configuration: ModelConfiguration(
                     id: "mlx-community/DeepSeek-R1-Distill-Llama-8B",
-                    defaultPrompt: "",
+                    defaultPrompt: "Summarize",
                     temperature: 0.7,
                     maxTokens: 150,
                     additionalMetadata: [
@@ -96,30 +99,12 @@ extension SummarizationModel {
             ),
 
             SummarizationModel(
-                name: "BART Large CNN",
-                modelId: "facebook/bart-large-cnn",
-                size: .large,
-                configuration: ModelConfiguration(
-                    id: "facebook/bart-large-cnn",
-                    defaultPrompt: "",
-                    extraEOSTokens: ["</s>"],
-                    temperature: 0.6,
-                    maxTokens: 250,
-                    additionalMetadata: [
-                        "type": "encoder-decoder",
-                        "quantization": "none",
-                        "engine": "transformers"
-                    ]
-                )
-            ),
-
-            SummarizationModel(
                 name: "DeepSeek R1‑0528 Qwen3 8B 4bit DWQ",
                 modelId: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
                 size: .large,
                 configuration: ModelConfiguration(
                     id: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
-                    defaultPrompt: "",
+                    defaultPrompt: "Summarize",
                     temperature: 0.7,
                     maxTokens: 200,
                     additionalMetadata: [
@@ -131,46 +116,12 @@ extension SummarizationModel {
             ),
 
             SummarizationModel(
-                name: "ModernBERT base",
-                modelId: "answerdotai/ModernBERT-base",
-                size: .large,
-                configuration: ModelConfiguration(
-                    id: "answerdotai/ModernBERT-base",
-                    defaultPrompt: "",
-                    temperature: 0.7,
-                    maxTokens: 200,
-                    additionalMetadata: [
-                        "type": "encoder-only",
-                        "quantization": "none",
-                        "engine": "transformers"
-                    ]
-                )
-            ),
-
-            SummarizationModel(
-                name: "ModernBERT large",
-                modelId: "answerdotai/ModernBERT-large",
-                size: .large,
-                configuration: ModelConfiguration(
-                    id: "answerdotai/ModernBERT-large",
-                    defaultPrompt: "",
-                    temperature: 0.7,
-                    maxTokens: 200,
-                    additionalMetadata: [
-                        "type": "encoder-only",
-                        "quantization": "none",
-                        "engine": "transformers"
-                    ]
-                )
-            ),
-
-            SummarizationModel(
                 name: "Llama 3.2 3B Instruct",
                 modelId: "mlx-community/Llama-3.2-3B-Instruct-4bit",
                 size: .large,
                 configuration: ModelConfiguration(
                     id: "mlx-community/Llama-3.2-3B-Instruct-4bit",
-                    defaultPrompt: "",
+                    defaultPrompt: "Summarize",
                     temperature: 0.7,
                     maxTokens: 200,
                     additionalMetadata: [
@@ -187,7 +138,7 @@ extension SummarizationModel {
                 size: .small,
                 configuration: ModelConfiguration(
                     id: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
-                    defaultPrompt: "",
+                    defaultPrompt: "Summarize",
                     temperature: 0.7,
                     maxTokens: 200,
                     additionalMetadata: [
@@ -204,7 +155,7 @@ extension SummarizationModel {
                 size: .large,
                 configuration: ModelConfiguration(
                     id: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
-                    defaultPrompt: "",
+                    defaultPrompt: "Summarize",
                     temperature: 0.7,
                     maxTokens: 200,
                     additionalMetadata: [

@@ -32,6 +32,9 @@ struct ContentView: View {
         }
         .frame(minWidth: 1200, minHeight: 800)
         .navigationTitle("Summarization Benchmark")
+        .navigationTitle("Summarization Benchmark")
+        .navigationTitle("Summarization Benchmark")
+        .navigationTitle("Summarization Benchmark")
     }
 }
 
@@ -327,32 +330,7 @@ struct BenchmarkControlsView: View {
                 .cornerRadius(8)
             }
             
-            // Summarize Button
-            Button(action: {
-                Task {
-                    guard let model = benchmarkVM.selectedModel else { return }
-                    do {
-                        try await benchmarkVM.summarize(text: inputText, model: model)
-                    } catch {
-                        benchmarkVM.errorMessage = error.localizedDescription
-                    }
-                }
-            }) {
-                HStack {
-                    Image(systemName: "text.badge.checkmark")
-                    Text("Summarize")
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.vertical, 8)
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!canRunBenchmark)
-            .opacity(canRunBenchmark ? 1.0 : 0.6)
-            .overlay {
-                if benchmarkVM.isGenerating {
-                    ProgressView()
-                }
-            }
+            // Кнопка суммаризации удалена
             
             // Run Benchmark Button
             Button(action: {
@@ -461,7 +439,7 @@ struct BenchmarkResultsPanel: View {
                         Text("No results yet")
                             .font(.headline)
                             .foregroundColor(.secondary)
-                        Text("Click 'Summarize' or 'Run Benchmark' to see results")
+                        Text("Click 'Run Benchmark' to see results")
                             .font(.caption)
                             .foregroundColor(.secondary)
                     }
@@ -667,6 +645,7 @@ enum TextPreset: String, CaseIterable {
     case economics = "economics"
     case space = "space"
     case gun = "gun"
+    case penguin = "penguin"
     
     var title: String {
         switch self {
@@ -676,6 +655,7 @@ enum TextPreset: String, CaseIterable {
         case .economics: return "Global Economics"
         case .space: return "Space Exploration"
         case .gun: return "Зимнее утро"
+        case .penguin: return "Penguin"
         }
     }
     
@@ -733,6 +713,20 @@ enum TextPreset: String, CaseIterable {
                 И навестим поля пустые,
                 Леса, недавно столь густые,
                 И берег, милый для меня.
+                """
+        case .penguin:
+            return """
+                Пингвин — птица, которая не летает. Зато все 18 видов этого семейства отлично плавают и ныряют — благодаря обтекаемой форме тела и устройству костей крыльев.
+
+                Императорских пингвинов в Антарктиде живет так много, что их колонии видны из космоса! Это помогает ученым изучать птиц, считать их, следить за передвиженями.
+
+                «Эффектом пингвина» называют такое поведение, когда ни один человек (или пингвин!) на берегу не хочет первым заходить в воду. Может быть, потому, что она холодная, или просто нет настроения. Но пингвины делают именно так: подталкивают друг друга, отходят как бы нерешительно, снова приближаются к воде — до тех пор, пока кто-то из них не спрыгнет в воду первым. Такое поведение — природный механизм, ведь в естественных условиях жизни пингвин, первым прыгнувший в воду, рискует быть съеденным хищником.
+
+                Пингвины пьют морскую воду (или глотают ее во время охоты за рыбой). Для них это безопасно, потому что с помощью особой надглазной железы соль отфильтровывается из организма птицы. Соленая вода потом выделяется через клюв во время чихания.
+
+                Пингвины питаются морепродуктами. Рыбу, кальмаров и креветок они ловят во время ныряния, но пищу не жуют — зубов у пингвина нет, он же птица! Зато у него в пасти особые шипы, которые помогают еде отправляться прямо в глотку.
+
+                Раз в год пингвины линяют. Линька происходит обычно весной: «зимнее», старое оперение пингвин меняет на новое, сбрасывая практически все перья! От трёх до четырёх недель, пока новое оперение отрастает, пингвин выглядит как пушистый серо-коричневый шарик. У нового пуха еще некоторое время нет водоотталкивающих свойств, поэтому плавать пингвин в это время не может.
                 """
         }
     }

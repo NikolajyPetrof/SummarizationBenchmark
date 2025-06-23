@@ -48,96 +48,6 @@ class BenchmarkViewModel: ObservableObject {
         }
     }
     
-    /// Метод для простой суммаризации текста без добавления в сессию бенчмарка
-    func summarize(text: String, model: SummarizationModel) async throws {
-        print("Summarize called with model: \(model.name), text length: \(text.count)")
-        
-        guard let container = modelManager.loadedModels[model.modelId] else {
-            print("Error: Model not loaded - \(model.modelId)")
-            throw SummarizerError.modelNotLoaded
-        }
-        
-        print("Model container found, starting generation")
-        isGenerating = true
-        let startTime = CFAbsoluteTimeGetCurrent()
-        let memoryBefore = getCurrentMemoryUsage()
-        
-        do {
-            let prompt = "\(model.configuration.defaultPrompt)\n\n\(text)\n\nSummary:"
-            
-            let summary = try await container.perform { context in
-                let input = try await context.processor.prepare(input: .init(prompt: prompt))
-                
-                let generateStream = try MLXLMCommon.generate(
-                    input: input,
-                    parameters: GenerateParameters(
-                        maxTokens: 200,
-                        temperature: 0.7,
-                        topP: 0.9,
-                        repetitionPenalty: 1.1
-                    ),
-                    context: context
-                )
-                
-                var localGeneratedText = ""
-                var localTokenCount = 0
-                
-                for await generation in generateStream {
-                    if let chunk = generation.chunk {
-                        localGeneratedText += chunk
-                        localTokenCount += 1
-                    }
-                }
-                
-                return (localGeneratedText, localTokenCount)
-            }
-            
-            let endTime = CFAbsoluteTimeGetCurrent()
-            let memoryAfter = getCurrentMemoryUsage()
-            
-            let inferenceTime = endTime - startTime
-            let tokensCount = summary.1
-            let tokensPerSecond = Double(tokensCount) / inferenceTime
-            let memoryUsed = memoryAfter - memoryBefore
-            let compressionRatio = Double(summary.0.count) / Double(text.count)
-            
-            let metrics = BenchmarkResult.PerformanceMetrics(
-                loadTime: 0,
-                inferenceTime: inferenceTime,
-                tokensPerSecond: tokensPerSecond,
-                memoryUsed: memoryUsed,
-                summaryLength: summary.0.count,
-                compressionRatio: compressionRatio,
-                inputLength: text.count,
-                tokensGenerated: tokensCount
-            )
-            
-            let result = BenchmarkResult(
-                timestamp: Date(),
-                modelName: model.name,
-                modelId: model.modelId,
-                inputText: text,
-                generatedSummary: summary.0,
-                metrics: metrics
-            )
-            
-            currentResult = result
-            generatedSummary = summary.0
-            
-            print("Summarization completed successfully. Summary length: \(summary.0.count)")
-            print("Setting currentResult and generatedSummary")
-            
-            // Не добавляем результат в сессию бенчмарка
-            
-        } catch {
-            print("Error during summarization: \(error.localizedDescription)")
-            throw error
-        }
-        
-        print("Setting isGenerating = false")
-        isGenerating = false
-    }
-    
     func runBenchmark(text: String, model: SummarizationModel) async throws {
         guard let container = modelManager.loadedModels[model.modelId] else {
             throw SummarizerError.modelNotLoaded
@@ -148,8 +58,7 @@ class BenchmarkViewModel: ObservableObject {
         let memoryBefore = getCurrentMemoryUsage()
         
         do {
-            let prompt = "\(model.configuration.defaultPrompt)\n\n\(text)\n\nSummary:"
-            
+            let prompt = model.configuration.createPrompt(for: text)
             let summary = try await container.perform { context in
                 let input = try await context.processor.prepare(input: .init(prompt: prompt))
                 
