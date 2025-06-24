@@ -22,10 +22,10 @@ struct ModelConfiguration: Identifiable, Hashable {
         """
     init(
         id: String,
-        defaultPrompt: String,
+        defaultPrompt: String = "",
         extraEOSTokens: [String] = [],
-        temperature: Float = 0.7,
-        maxTokens: Int = 200,
+        temperature: Float = 0.6,
+        maxTokens: Int = 180,
         additionalMetadata: [String: String] = [:]
     ) {
         self.id = id

@@ -218,6 +218,7 @@ struct ModelCardView: View {
     
     private var sizeColor: Color {
         switch model.size {
+        case .tiny: return .green
         case .small: return .green
         case .middle: return .red
         case .large: return .orange

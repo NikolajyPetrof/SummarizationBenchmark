@@ -15,12 +15,14 @@ struct SummarizationModel: Identifiable, Hashable {
     let configuration: ModelConfiguration
     
     enum ModelSize: String, CaseIterable {
-        case small = "1.5B"
+        case tiny = "< 1B"
+        case small = "~ 1.5B"
         case middle = "3B"
         case large = "8B"
         
         var expectedMemory: Double {
             switch self {
+            case .tiny: return 2.0
             case .small: return 2.0  // GB
             case .middle: return 3.0  // GB
             case .large: return 8.0  // GB
@@ -29,6 +31,7 @@ struct SummarizationModel: Identifiable, Hashable {
         
         var color: String {
             switch self {
+            case .tiny: return "slat"
             case .small: return "green"
             case .middle: return "yellow"
             case .large: return "red"
@@ -63,33 +66,69 @@ extension SummarizationModel {
     static let availableModels: [SummarizationModel] = [
         
         SummarizationModel(
+            name: "Llama 3.2 3B Instruct",
+            modelId: "mlx-community/Llama-3.2-3B-Instruct-4bit",
+            size: .tiny,
+            configuration: ModelConfiguration(
+                id: "mlx-community/Llama-3.2-3B-Instruct-4bit",
+                additionalMetadata: [
+                    "type": "decoder-only",
+                    "quantization": "4bit",
+                    "engine": "mlx"
+                ]
+            )
+        ),
+
+        SummarizationModel(
+            name: "Qwen2.5 1.5B Instruct",
+            modelId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+            size: .tiny,
+            configuration: ModelConfiguration(
+                id: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+                additionalMetadata: [
+                    "type": "decoder-only",
+                    "quantization": "4bit",
+                    "engine": "mlx"
+                ]
+            )
+        ),
+        
+
+        SummarizationModel(
+            name: "Meta Llama 3 8B Instruct 4bit",
+            modelId: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
+            size: .small,
+            configuration: ModelConfiguration(
+                id: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
+                additionalMetadata: [
+                    "type": "decoder-only",
+                    "quantization": "4bit",
+                    "engine": "mlx"
+                ]
+            )
+        ),
+        
+        SummarizationModel(
+            name: "Qwen3 Embedding 8B 4bit-DWQ",
+            modelId: "mlx-community/Qwen3-Embedding-8B-4bit-DWQ",
+            size: .small,
+            configuration: ModelConfiguration(
+                id: "mlx-community/Qwen3-Embedding-8B-4bit-DWQ",
+                additionalMetadata: [
+                    "type": "decoder-only",
+                    "quantization": "4bit",
+                    "engine": "mlx"
+                ]
+            )
+        ),
+        
+        SummarizationModel(
                 name: "DeepSeek R1 Distill Qwen 1.5B",
                 modelId: "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B",
                 size: .small,
                 configuration: ModelConfiguration(
                     id: "mlx-community/DeepSeek-R1-Distill-Qwen-1.5B",
-                    defaultPrompt: "Summarize",
                     extraEOSTokens: ["<|end|>"],
-                    temperature: 0.6,
-                    maxTokens: 200,
-                    additionalMetadata: [
-                        "type": "decoder-only",
-                        "quantization": "4bit",
-                        "engine": "mlx"
-                    ]
-                )
-            ),
-
-            // 8B Models
-            SummarizationModel(
-                name: "DeepSeek R1 Distill Llama 8B",
-                modelId: "mlx-community/DeepSeek-R1-Distill-Llama-8B",
-                size: .large,
-                configuration: ModelConfiguration(
-                    id: "mlx-community/DeepSeek-R1-Distill-Llama-8B",
-                    defaultPrompt: "Summarize",
-                    temperature: 0.7,
-                    maxTokens: 150,
                     additionalMetadata: [
                         "type": "decoder-only",
                         "quantization": "4bit",
@@ -101,46 +140,9 @@ extension SummarizationModel {
             SummarizationModel(
                 name: "DeepSeek R1‑0528 Qwen3 8B 4bit DWQ",
                 modelId: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
-                size: .large,
-                configuration: ModelConfiguration(
-                    id: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
-                    defaultPrompt: "Summarize",
-                    temperature: 0.7,
-                    maxTokens: 200,
-                    additionalMetadata: [
-                        "type": "decoder-only",
-                        "quantization": "4bit",
-                        "engine": "mlx"
-                    ]
-                )
-            ),
-
-            SummarizationModel(
-                name: "Llama 3.2 3B Instruct",
-                modelId: "mlx-community/Llama-3.2-3B-Instruct-4bit",
-                size: .large,
-                configuration: ModelConfiguration(
-                    id: "mlx-community/Llama-3.2-3B-Instruct-4bit",
-                    defaultPrompt: "Summarize",
-                    temperature: 0.7,
-                    maxTokens: 200,
-                    additionalMetadata: [
-                        "type": "decoder-only",
-                        "quantization": "4bit",
-                        "engine": "mlx"
-                    ]
-                )
-            ),
-
-            SummarizationModel(
-                name: "Qwen2.5 1.5B Instruct",
-                modelId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
                 size: .small,
                 configuration: ModelConfiguration(
-                    id: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
-                    defaultPrompt: "Summarize",
-                    temperature: 0.7,
-                    maxTokens: 200,
+                    id: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
                     additionalMetadata: [
                         "type": "decoder-only",
                         "quantization": "4bit",
@@ -148,24 +150,20 @@ extension SummarizationModel {
                     ]
                 )
             ),
-
+            
             SummarizationModel(
-                name: "Meta Llama 3 8B Instruct 4bit",
-                modelId: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
+                name: "DeepSeek R1 Distill Llama 8B",
+                modelId: "mlx-community/DeepSeek-R1-Distill-Llama-8B",
                 size: .large,
                 configuration: ModelConfiguration(
-                    id: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
-                    defaultPrompt: "Summarize",
-                    temperature: 0.7,
-                    maxTokens: 200,
+                    id: "mlx-community/DeepSeek-R1-Distill-Llama-8B",
                     additionalMetadata: [
                         "type": "decoder-only",
                         "quantization": "4bit",
                         "engine": "mlx"
                     ]
                 )
-            )
-        
+            ),
         
     ]
 }
