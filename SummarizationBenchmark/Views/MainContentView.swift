@@ -12,12 +12,32 @@ import AppKit
 // Класс для управления состоянием приложения
 @MainActor
 class AppState: ObservableObject {
-    let modelManager = ModelManager()
+    let modelManager: ModelManager
     let benchmarkVM: BenchmarkViewModel
+    let datasetManager = DatasetManager()
+    
+    // Выбранная вкладка (0 - Benchmark, 1 - Datasets)
+    @Published var selectedTab: Int = 0
     
     init() {
         print("AppState: Создание AppState и ModelManager")
+        
+        // Сначала создаем ModelManager без ссылки на AppState
+        modelManager = ModelManager()
+        
+        // Создаем BenchmarkViewModel
         benchmarkVM = BenchmarkViewModel(modelManager: modelManager)
+        
+        // Теперь устанавливаем ссылку на AppState в ModelManager
+        modelManager.appState = self
+        
+        // Инициализируем датасеты
+        Task {
+            await datasetManager.loadDatasets()
+            if datasetManager.datasets.isEmpty {
+                await datasetManager.createDemoDatasets()
+            }
+        }
     }
 }
 
@@ -27,13 +47,15 @@ struct ContentView: View {
     
     var body: some View {
         return NavigationView {
-            SidebarView(benchmarkVM: appState.benchmarkVM, modelManager: appState.modelManager)
-            MainBenchmarkView(benchmarkVM: appState.benchmarkVM, modelManager: appState.modelManager)
+            SidebarView(benchmarkVM: appState.benchmarkVM, modelManager: appState.modelManager, datasetManager: appState.datasetManager, appState: appState)
+            
+            if appState.selectedTab == 0 {
+                MainBenchmarkView(benchmarkVM: appState.benchmarkVM, modelManager: appState.modelManager, datasetManager: appState.datasetManager)
+            } else {
+                DatasetsView(datasetManager: appState.datasetManager)
+            }
         }
         .frame(minWidth: 1200, minHeight: 800)
-        .navigationTitle("Summarization Benchmark")
-        .navigationTitle("Summarization Benchmark")
-        .navigationTitle("Summarization Benchmark")
         .navigationTitle("Summarization Benchmark")
     }
 }
@@ -42,6 +64,8 @@ struct ContentView: View {
 struct SidebarView: View {
     @ObservedObject var benchmarkVM: BenchmarkViewModel
     @ObservedObject var modelManager: ModelManager
+    @ObservedObject var datasetManager: DatasetManager
+    @ObservedObject var appState: AppState
     
     private func modelCardView(for model: SummarizationModel) -> some View {
         let isCurrentModel = benchmarkVM.currentResult?.modelId == model.modelId
@@ -87,22 +111,70 @@ struct SidebarView: View {
     
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Header
-            Text("Models")
-                .font(.title2)
-                .bold()
-                .padding()
+            // Navigation Tabs
+            VStack(spacing: 0) {
+                Button(action: { appState.selectedTab = 0 }) {
+                    HStack {
+                        Image(systemName: "chart.bar")
+                        Text("Benchmark")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(appState.selectedTab == 0 ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .foregroundColor(appState.selectedTab == 0 ? .accentColor : .primary)
+                }
+                
+                Button(action: { appState.selectedTab = 1 }) {
+                    HStack {
+                        Image(systemName: "doc.text.magnifyingglass")
+                        Text("Datasets")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(appState.selectedTab == 1 ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .foregroundColor(appState.selectedTab == 1 ? .accentColor : .primary)
+                }
+            }
+            .buttonStyle(.plain)
             
             Divider()
             
-            // Models List
-            ScrollView {
-                LazyVStack(spacing: 8) {
-                    ForEach(SummarizationModel.availableModels) { model in
-                        modelCardView(for: model)
+            if appState.selectedTab == 0 {
+                // Models Section
+                VStack(alignment: .leading) {
+                    Text("Models")
+                        .font(.title2)
+                        .bold()
+                        .padding()
+                    
+                    // Models List
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(SummarizationModel.availableModels) { model in
+                                modelCardView(for: model)
+                            }
+                        }
+                        .padding(.horizontal)
                     }
                 }
-                .padding(.horizontal)
+            } else {
+                // Datasets Section
+                VStack(alignment: .leading) {
+                    Text("Datasets")
+                        .font(.title2)
+                        .bold()
+                        .padding()
+                    
+                    // Dataset List
+                    ScrollView {
+                        LazyVStack(spacing: 8) {
+                            ForEach(datasetManager.datasets) { dataset in
+                                datasetCardView(dataset)
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
             }
             
             Spacer()
@@ -113,6 +185,74 @@ struct SidebarView: View {
         }
         .frame(minWidth: 300, maxWidth: 350)
         .background(Color(NSColor.controlBackgroundColor))
+    }
+    
+    private func datasetCardView(_ dataset: Dataset) -> some View {
+        let isSelected = datasetManager.selectedDataset?.id == dataset.id
+        
+        return Button(action: {
+            datasetManager.selectedDataset = dataset
+        }) {
+            VStack(alignment: .leading, spacing: 4) {
+                Text(dataset.name)
+                    .font(.headline)
+                    .lineLimit(1)
+                
+                Text("\(dataset.entries.count) entries")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                
+                HStack {
+                    Image(systemName: sourceIcon(for: dataset.source))
+                    Text(dataset.source.rawValue)
+                        .font(.caption2)
+                    
+                    Spacer()
+                    
+                    Image(systemName: categoryIcon(for: dataset.category))
+                    Text(dataset.category.rawValue)
+                        .font(.caption2)
+                }
+                .foregroundColor(.secondary)
+            }
+            .padding()
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(isSelected ? Color.accentColor.opacity(0.2) : Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .stroke(isSelected ? Color.accentColor : Color.gray.opacity(0.3), lineWidth: 1)
+            )
+        }
+        .buttonStyle(.plain)
+    }
+    
+    // Получение иконки для источника датасета
+    private func sourceIcon(for source: Dataset.DatasetSource) -> String {
+        switch source {
+        case .cnnDailyMail:
+            return "newspaper"
+        case .redditTIFU:
+            return "person.2"
+        case .scientificAbstracts:
+            return "book"
+        case .custom:
+            return "doc.text"
+        }
+    }
+    
+    // Получение иконки для категории датасета
+    private func categoryIcon(for category: Dataset.DatasetCategory) -> String {
+        switch category {
+        case .news:
+            return "globe"
+        case .social:
+            return "bubble.left.and.bubble.right"
+        case .scientific:
+            return "graduationcap"
+        case .other:
+            return "doc"
+        }
     }
 }
 
@@ -174,20 +314,44 @@ struct MemoryInfoView: View {
 struct MainBenchmarkView: View {
     @ObservedObject var benchmarkVM: BenchmarkViewModel
     @ObservedObject var modelManager: ModelManager
+    @ObservedObject var datasetManager: DatasetManager
+    @State private var selectedBenchmarkMode: BenchmarkMode = .singleText
+    
+    enum BenchmarkMode: String, CaseIterable {
+        case singleText = "Single Text"
+        case dataset = "Dataset"
+    }
     
     var body: some View {
-        HSplitView {
-            // Input Panel
-            TextInputPanel(benchmarkVM: benchmarkVM, modelManager: modelManager)
-                .frame(minWidth: 400, idealWidth: 500, maxWidth: .infinity, maxHeight: .infinity)
-                .layoutPriority(1)
+        VStack(spacing: 0) {
+            // Mode Selector
+            Picker("Benchmark Mode", selection: $selectedBenchmarkMode) {
+                ForEach(BenchmarkMode.allCases, id: \.self) { mode in
+                    Text(mode.rawValue).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+            .padding()
             
-            // Results Panel
-            BenchmarkResultsPanel(benchmarkVM: benchmarkVM)
-                .frame(minWidth: 400, idealWidth: 500, maxWidth: .infinity, maxHeight: .infinity)
-                .layoutPriority(1)
+            // Content based on selected mode
+            if selectedBenchmarkMode == .singleText {
+                HSplitView {
+                    // Input Panel
+                    TextInputPanel(benchmarkVM: benchmarkVM, modelManager: modelManager)
+                        .frame(minWidth: 400, idealWidth: 500, maxWidth: .infinity, maxHeight: .infinity)
+                        .layoutPriority(1)
+                    
+                    // Results Panel
+                    BenchmarkResultsPanel(benchmarkVM: benchmarkVM)
+                        .frame(minWidth: 400, idealWidth: 500, maxWidth: .infinity, maxHeight: .infinity)
+                        .layoutPriority(1)
+                }
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            } else {
+                DatasetBenchmarkView(benchmarkVM: benchmarkVM, datasetManager: datasetManager)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
         }
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 }
 

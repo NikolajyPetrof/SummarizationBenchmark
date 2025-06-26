@@ -12,6 +12,8 @@ import MLXLMCommon
 
 @MainActor
 class ModelManager: ObservableObject {
+    // Ссылка на AppState для доступа к другим менеджерам
+    weak var appState: AppState?
     
     @Published var loadedModels: [String: ModelContainer] = [:]
     @Published var isLoading = false
@@ -29,6 +31,10 @@ class ModelManager: ObservableObject {
     // Ограничение на количество одновременных загрузок
     private let maxConcurrentLoads = 2
     private var loadingQueue: [String] = []
+    
+    init(appState: AppState? = nil) {
+        self.appState = appState
+    }
     
     func loadModel(_ model: SummarizationModel) async throws {
         print("ModelManager: Попытка загрузить модель: \(model.name) (\(model.modelId))")
