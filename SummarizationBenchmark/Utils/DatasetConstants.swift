@@ -10,13 +10,13 @@ import Foundation
 /// Константы для работы с датасетами
 enum DatasetConstants {
     /// URL для CNN/DailyMail датасета
-    static let cnnDailyMailURL = "https://huggingface.co/datasets/cnn_dailymail"
+    static let cnnDailyMailURL = "https://huggingface.co/datasets/abisee/cnn_dailymail"
     
     /// URL для Reddit TIFU датасета
-    static let redditTIFUURL = "https://huggingface.co/datasets/reddit_tifu"
+    static let redditTIFUURL = "https://huggingface.co/datasets/Oguzz07/reddit-tifu-dataset"
     
     /// URL для Scientific Abstracts датасета
-    static let scientificAbstractsURL = "https://huggingface.co/datasets/scientific_papers"
+    static let scientificAbstractsURL = "https://huggingface.co/datasets/armanc/scientific_papers"
     
     /// Стандартные размеры выборок для тестирования
     static let smallSampleSize = 10
