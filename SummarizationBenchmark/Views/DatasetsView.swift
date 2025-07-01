@@ -27,14 +27,14 @@ struct DatasetsView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Кнопка добавления в верхней части
+                // Add button at the top
                 HStack {
                     Spacer()
                     Button(action: { isShowingAddSheet = true }) {
                         HStack {
                             Image(systemName: "plus.circle.fill")
                                 .font(.title2)
-                            Text("Добавить датасет")
+                            Text("Add Dataset")
                                 .fontWeight(.semibold)
                         }
                         .foregroundColor(.white)
@@ -56,12 +56,12 @@ struct DatasetsView: View {
                     datasetListView
                 }
             }
-            .navigationTitle("Датасеты")
+            .navigationTitle("Datasets")
             .sheet(isPresented: $isShowingAddSheet) {
                 addDatasetView
             }
 
-            .alert("Ошибка", isPresented: .constant(datasetManager.errorMessage != nil)) {
+            .alert("Error", isPresented: .constant(datasetManager.errorMessage != nil)) {
                 Button("OK") {
                     datasetManager.errorMessage = nil
                 }
@@ -71,18 +71,18 @@ struct DatasetsView: View {
         }
     }
     
-    // Представление для пустого состояния
+    // Empty state view
     private var emptyStateView: some View {
         VStack(spacing: 20) {
             Image(systemName: "tray")
                 .font(.system(size: 80))
                 .foregroundColor(.secondary)
             
-            Text("Нет датасетов")
+            Text("No Datasets")
                 .font(.title)
                 .fontWeight(.medium)
             
-            Text("Используйте кнопку выше, чтобы добавить датасет для тестирования моделей")
+            Text("Use the button above to add a dataset for model testing")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
@@ -92,7 +92,7 @@ struct DatasetsView: View {
         .padding()
     }
     
-    // Представление списка датасетов
+    // Dataset list view
     private var datasetListView: some View {
         List {
             ForEach(datasetManager.datasets) { dataset in
@@ -104,7 +104,7 @@ struct DatasetsView: View {
         }
     }
     
-    // Строка датасета
+    // Dataset row view
     private func datasetRow(_ dataset: Dataset) -> some View {
         VStack(alignment: .leading, spacing: 4) {
             HStack {
@@ -113,7 +113,7 @@ struct DatasetsView: View {
                 
                 Spacer()
                 
-                Text("\(dataset.entries.count) записей")
+                Text("\(dataset.entries.count) entries")
                     .font(.caption)
                     .foregroundColor(.secondary)
             }
@@ -139,12 +139,12 @@ struct DatasetsView: View {
         .padding(.vertical, 4)
     }
     
-    // Представление для добавления датасета
+    // Add dataset view
     private var addDatasetView: some View {
         NavigationStack {
             Form {
-                Section(header: Text("Тип датасета")) {
-                    Picker("Источник", selection: $selectedDatasetType) {
+                Section(header: Text("Dataset Type")) {
+                    Picker("Source", selection: $selectedDatasetType) {
                         ForEach(Dataset.DatasetSource.allCases, id: \.self) { source in
                             Text(source.rawValue).tag(source)
                         }
@@ -302,7 +302,7 @@ struct DatasetsView: View {
                     .padding(.vertical, 4)
                 }
                 
-                Section(header: Text("Примеры")) {
+                Section(header: Text("Examples")) {
                     ForEach(dataset.entries.prefix(5)) { entry in
                         NavigationLink(destination: EntryDetailView(entry: entry)) {
                             VStack(alignment: .leading, spacing: 4) {
@@ -352,7 +352,7 @@ struct DatasetsView: View {
                     }
                 }
             }
-            .navigationTitle("Детали датасета")
+            .navigationTitle("Dataset Details")
             //.navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .primaryAction) {
@@ -371,7 +371,7 @@ struct DatasetsView: View {
         }
     }
     
-    // Загрузка выбранного датасета
+    // Load selected dataset
     private func downloadSelectedDataset() {
         Task {
             var dataset: Dataset?
@@ -384,7 +384,7 @@ struct DatasetsView: View {
             case .scientificAbstracts:
                 dataset = await downloader.downloadScientificAbstractsDataset(sampleSize: selectedSampleSize)
             case .custom:
-                // Для пользовательских датасетов нужна отдельная логика
+                // Custom datasets need separate logic
                 break
             }
             
@@ -397,7 +397,7 @@ struct DatasetsView: View {
         }
     }
     
-    // Удаление датасетов
+    // Delete datasets
     private func deleteDatasets(at offsets: IndexSet) {
         for index in offsets {
             let dataset = datasetManager.datasets[index]
@@ -405,7 +405,7 @@ struct DatasetsView: View {
         }
     }
     
-    // Получение иконки для источника датасета
+    // Get icon for dataset source
     private func sourceIcon(for source: Dataset.DatasetSource) -> String {
         switch source {
         case .cnnDailyMail:
@@ -419,7 +419,7 @@ struct DatasetsView: View {
         }
     }
     
-    // Получение иконки для категории датасета
+    // Get icon for dataset category
     private func categoryIcon(for category: Dataset.DatasetCategory) -> String {
         switch category {
         case .news:
@@ -433,22 +433,22 @@ struct DatasetsView: View {
         }
     }
     
-    // Получение описания для типа датасета
+    // Get description for dataset type
     private func datasetDescription(for source: Dataset.DatasetSource) -> String {
         switch source {
         case .cnnDailyMail:
-            return "Датасет CNN/DailyMail содержит новостные статьи и их саммари. Это один из наиболее популярных датасетов для задач суммаризации текста. Статьи относятся к различным темам: политика, технологии, наука, спорт и т.д."
+            return "The CNN/DailyMail dataset contains news articles and their summaries. It's one of the most popular datasets for text summarization tasks. The articles cover various topics: politics, technology, science, sports, etc."
         case .redditTIFU:
-            return "Датасет Reddit TIFU содержит посты из сабреддита 'Today I F***ed Up', где пользователи рассказывают о своих неудачах и ошибках. Каждый пост имеет краткое саммари (TL;DR), написанное самим автором."
+            return "The Reddit TIFU dataset contains posts from the 'Today I F***ed Up' subreddit, where users share their failures and mistakes. Each post has a brief summary (TL;DR) written by the author."
         case .scientificAbstracts:
-            return "Датасет Scientific Abstracts содержит научные абстракты из различных областей знаний. Каждый абстракт сопровождается саммари, которое кратко описывает основные результаты исследования."
+            return "The Scientific Abstracts dataset contains scientific abstracts from various fields. Each abstract is accompanied by a summary that briefly describes the main research findings."
         case .custom:
-            return "Пользовательский датасет позволяет загрузить собственные тексты и саммари для тестирования моделей суммаризации."
+            return "Custom dataset allows you to upload your own texts and summaries for testing summarization models."
         }
     }
 }
 
-// Представление для детальной информации о записи датасета
+// View for displaying dataset entry details
 struct EntryDetailView: View {
     let entry: DatasetEntry
     
@@ -456,7 +456,7 @@ struct EntryDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Group {
-                    Text("Исходный текст")
+                    Text("Source Text")
                         .font(.headline)
                     
                     Text(entry.text)
@@ -468,7 +468,7 @@ struct EntryDetailView: View {
                 
                 if let summary = entry.referenceSummary {
                     Group {
-                        Text("Эталонное саммари")
+                        Text("Reference Summary")
                             .font(.headline)
                         
                         Text(summary)
@@ -480,36 +480,36 @@ struct EntryDetailView: View {
                 }
                 
                 Group {
-                    Text("Статистика")
+                    Text("Statistics")
                         .font(.headline)
                     
                     VStack(alignment: .leading, spacing: 8) {
                         HStack {
-                            Text("Длина текста:")
+                            Text("Text Length:")
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("\(entry.characterCount) символов")
+                            Text("\(entry.characterCount) characters")
                         }
                         
                         HStack {
-                            Text("Количество слов:")
+                            Text("Word Count:")
                                 .foregroundColor(.secondary)
                             Spacer()
-                            Text("\(entry.wordCount) слов")
+                            Text("\(entry.wordCount) words")
                         }
                         
                         if let summaryWordCount = entry.summaryWordCount {
                             HStack {
-                                Text("Длина саммари:")
+                                Text("Summary Length:")
                                     .foregroundColor(.secondary)
                                 Spacer()
-                                Text("\(summaryWordCount) слов")
+                                Text("\(summaryWordCount) words")
                             }
                         }
                         
                         if let compressionRatio = entry.compressionRatio {
                             HStack {
-                                Text("Коэффициент сжатия:")
+                                Text("Compression Ratio:")
                                     .foregroundColor(.secondary)
                                 Spacer()
                                 Text(String(format: "%.2f", compressionRatio))
@@ -523,7 +523,7 @@ struct EntryDetailView: View {
                 
                 if !entry.metadata.isEmpty {
                     Group {
-                        Text("Метаданные")
+                        Text("Metadata")
                             .font(.headline)
                         
                         VStack(alignment: .leading, spacing: 8) {
@@ -545,6 +545,6 @@ struct EntryDetailView: View {
             }
             .padding()
         }
-        .navigationTitle("Детали записи")
+        .navigationTitle("Entry Details")
     }
 }

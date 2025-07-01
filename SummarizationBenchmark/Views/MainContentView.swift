@@ -9,29 +9,29 @@ import MLX
 import SwiftUI
 import AppKit
 
-// Класс для управления состоянием приложения
+// Class for managing application state
 @MainActor
 class AppState: ObservableObject {
     let modelManager: ModelManager
     let benchmarkVM: BenchmarkViewModel
     let datasetManager = DatasetManager()
     
-    // Выбранная вкладка (0 - Benchmark, 1 - Datasets)
+    // Selected tab (0 - Benchmark, 1 - Datasets)
     @Published var selectedTab: Int = 0
     
     init() {
-        print("AppState: Создание AppState и ModelManager")
+        print("AppState: Creating AppState and ModelManager")
         
-        // Сначала создаем ModelManager без ссылки на AppState
+        // First create ModelManager without reference to AppState
         modelManager = ModelManager()
         
-        // Создаем BenchmarkViewModel
+        // Create BenchmarkViewModel
         benchmarkVM = BenchmarkViewModel(modelManager: modelManager)
         
-        // Теперь устанавливаем ссылку на AppState в ModelManager
+        // Now set the reference to AppState in ModelManager
         modelManager.appState = self
         
-        // Инициализируем датасеты
+        // Initialize datasets
         Task {
              datasetManager.loadDatasets()
         }
@@ -39,7 +39,7 @@ class AppState: ObservableObject {
 }
 
 struct ContentView: View {
-    // Используем StateObject для создания и хранения AppState
+    // Use StateObject to create and store AppState
     @StateObject private var appState = AppState()
     
     var body: some View {

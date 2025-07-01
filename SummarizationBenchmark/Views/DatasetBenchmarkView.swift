@@ -61,7 +61,7 @@ struct DatasetBenchmarkView: View {
         }
     }
     
-    // Представление для случая, когда датасет не выбран
+    // View for when no dataset is selected
     private var noDatasetSelectedView: some View {
         VStack(spacing: 16) {
             Image(systemName: "doc.text.magnifyingglass")
@@ -81,7 +81,7 @@ struct DatasetBenchmarkView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
     
-    // Представление для конфигурации бенчмарка
+    // Benchmark configuration view
     private var configurationView: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Configuration")
@@ -130,7 +130,7 @@ struct DatasetBenchmarkView: View {
         .cornerRadius(8)
     }
     
-    // Представление для отображения прогресса бенчмарка
+    // Benchmark progress view
     private var runningBenchmarkView: some View {
         VStack(alignment: .leading, spacing: 16) {
             Text("Running benchmark...")
@@ -155,7 +155,7 @@ struct DatasetBenchmarkView: View {
         .cornerRadius(8)
     }
     
-    // Представление для отображения результатов бенчмарка
+    // Benchmark results view
     @State private var copiedSummary: String? = nil
     
     private var resultsView: some View {
@@ -244,7 +244,7 @@ struct DatasetBenchmarkView: View {
                     }
                     
                     Button("View Details") {
-                        // Здесь можно добавить действие для просмотра деталей результата
+                        // Action for viewing result details can be added here
                     }
                     .buttonStyle(.borderless)
                 }
@@ -259,7 +259,7 @@ struct DatasetBenchmarkView: View {
         .cornerRadius(8)
     }
     
-    // Запуск бенчмарка
+    // Run benchmark
     private func runBenchmark() {
         guard let dataset = datasetManager.selectedDataset, let model = benchmarkVM.selectedModel else {
             errorMessage = "Please select a dataset and model"
@@ -271,32 +271,32 @@ struct DatasetBenchmarkView: View {
         currentEntryIndex = 0
         progress = 0
         
-        // Определяем количество записей для бенчмарка
+        // Determine number of entries for benchmark
         let entriesCount = min(selectedSampleSize, dataset.entries.count)
         
-        // Получаем случайную выборку записей из датасета
+        // Get random sample from dataset
         let selectedEntries = dataset.entries.shuffled().prefix(entriesCount).enumerated().map { (index, entry) in
             return (index, entry)
         }
         
-        // Запускаем бенчмарк асинхронно
+        // Run benchmark asynchronously
         Task {
             for (i, (_, entry)) in selectedEntries.enumerated() {
                 if !isRunningBenchmark {
-                    break // Прерываем, если бенчмарк был отменен
+                    break // Exit if benchmark was cancelled
                 }
                 
                 currentEntryIndex = i
                 progress = Double(i) / Double(entriesCount)
                 
-                // Используем entry из выбранной выборки
+                // Use entry from selected sample
                 
                 do {
-                    // Запускаем бенчмарк для текущей записи
+                    // Run benchmark for current entry
                     try await benchmarkVM.runBenchmark(text: entry.text, model: model)
                     
                     if let result = benchmarkVM.currentResult {
-                        // Создаем результат для записи датасета
+                        // Create result for dataset entry
                         let datasetResult = DatasetBenchmarkResult(
                             entryIndex: i,
                             entryId: entry.id,
@@ -310,7 +310,7 @@ struct DatasetBenchmarkView: View {
                             referenceSummary: entry.referenceSummary
                         )
                         
-                        // Добавляем результат в список
+                        // Add result to list
                         await MainActor.run {
                             results.append(datasetResult)
                         }
@@ -324,7 +324,7 @@ struct DatasetBenchmarkView: View {
                 }
             }
             
-            // Завершаем бенчмарк
+            // Complete benchmark
             await MainActor.run {
                 isRunningBenchmark = false
                 progress = 1.0
@@ -332,7 +332,7 @@ struct DatasetBenchmarkView: View {
         }
     }
     
-    // Функции копирования
+    // Copy functions
     private func copyAllResults() {
         let avgTime = results.reduce(0) { $0 + $1.inferenceTime } / Double(results.count)
         let avgTokensPerSec = results.reduce(0) { $0 + $1.tokensPerSecond } / Double(results.count)
@@ -386,7 +386,7 @@ struct DatasetBenchmarkView: View {
 
 }
 
-// Структура для хранения результатов бенчмарка на датасете
+// Structure for storing dataset benchmark results
 struct DatasetBenchmarkResult: Identifiable, Codable {
     var id = UUID()
     let entryIndex: Int
@@ -400,15 +400,15 @@ struct DatasetBenchmarkResult: Identifiable, Codable {
     let generatedSummary: String
     let referenceSummary: String?
     
-    // Вычисляемые свойства для метрик качества
+    // Computed properties for quality metrics
     var rougeScore: Double? {
-        // Здесь можно добавить вычисление ROUGE метрики
+        // ROUGE metric calculation can be added here
         // между generatedSummary и referenceSummary
         return nil
     }
     
     var bleuScore: Double? {
-        // Здесь можно добавить вычисление BLEU метрики
+        // BLEU metric calculation can be added here
         // между generatedSummary и referenceSummary
         return nil
     }

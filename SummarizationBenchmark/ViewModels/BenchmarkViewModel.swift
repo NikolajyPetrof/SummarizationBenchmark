@@ -29,7 +29,7 @@ class BenchmarkViewModel: ObservableObject {
         loadSessions()
     }
     
-    // Фабричный метод для создания экземпляра BenchmarkViewModel
+    // Factory method to create BenchmarkViewModel instance
     static func create(with modelManager: ModelManager) -> BenchmarkViewModel {
         return BenchmarkViewModel(modelManager: modelManager)
     }
@@ -41,7 +41,7 @@ class BenchmarkViewModel: ObservableObject {
             results: []
         )
         
-        // Сохраняем сессию в список
+        // Save session to the list
         if let session = currentSession {
             sessions.append(session)
             saveSessionsToFile()
@@ -56,7 +56,7 @@ class BenchmarkViewModel: ObservableObject {
         isGenerating = true
         let startTime = CFAbsoluteTimeGetCurrent()
         
-        // Сбрасываем пиковое значение памяти перед началом измерения
+        // Reset peak memory before measurement
         MLX.GPU.resetPeakMemory()
         
         do {
@@ -90,7 +90,7 @@ class BenchmarkViewModel: ObservableObject {
             
             let endTime = CFAbsoluteTimeGetCurrent()
             
-            // Получаем пиковое значение памяти после инференса
+            // Get peak memory after inference
             let memoryUsed = getCurrentMemoryUsage()
             
             let inferenceTime = endTime - startTime
@@ -99,7 +99,7 @@ class BenchmarkViewModel: ObservableObject {
             let compressionRatio = Double(summary.0.count) / Double(text.count)
             
             let metrics = BenchmarkResult.PerformanceMetrics(
-                loadTime: 0, // Будем измерять отдельно
+                loadTime: 0, // Will be measured separately
                 inferenceTime: inferenceTime,
                 tokensPerSecond: tokensPerSecond,
                 memoryUsed: memoryUsed,
@@ -121,7 +121,7 @@ class BenchmarkViewModel: ObservableObject {
             currentResult = result
             generatedSummary = summary.0
             
-            // Добавляем в текущую сессию
+            // Add to current session
             if var session = currentSession {
                 session.results.append(result)
                 currentSession = session
@@ -136,7 +136,7 @@ class BenchmarkViewModel: ObservableObject {
     
     private func getCurrentMemoryUsage() -> Double {
         let memoryInfo = modelManager.getMemoryInfo()
-        let usedMB = Double(memoryInfo.used) / (1024 * 1024) // Конвертируем в MB
+        let usedMB = Double(memoryInfo.used) / (1024 * 1024) // Convert to MB
         return usedMB
     }
     
@@ -144,7 +144,7 @@ class BenchmarkViewModel: ObservableObject {
         guard let session = currentSession else { return }
         sessions.append(session)
         
-        // Сохранение в UserDefaults или файл
+        // Save to UserDefaults or file
         saveSessionsToFile()
     }
     
