@@ -55,7 +55,9 @@ class BenchmarkViewModel: ObservableObject {
         
         isGenerating = true
         let startTime = CFAbsoluteTimeGetCurrent()
-        let memoryBefore = getCurrentMemoryUsage()
+        
+        // Сбрасываем пиковое значение памяти перед началом измерения
+        MLX.GPU.resetPeakMemory()
         
         do {
             let prompt = model.configuration.createPrompt(for: text)
@@ -87,12 +89,13 @@ class BenchmarkViewModel: ObservableObject {
             }
             
             let endTime = CFAbsoluteTimeGetCurrent()
-            let memoryAfter = getCurrentMemoryUsage()
+            
+            // Получаем пиковое значение памяти после инференса
+            let memoryUsed = getCurrentMemoryUsage()
             
             let inferenceTime = endTime - startTime
             let tokensCount = summary.1
             let tokensPerSecond = Double(tokensCount) / inferenceTime
-            let memoryUsed = memoryAfter - memoryBefore
             let compressionRatio = Double(summary.0.count) / Double(text.count)
             
             let metrics = BenchmarkResult.PerformanceMetrics(
@@ -132,7 +135,9 @@ class BenchmarkViewModel: ObservableObject {
     }
     
     private func getCurrentMemoryUsage() -> Double {
-        return Double(modelManager.getMemoryInfo().used) / (1024 * 1024) // Конвертируем в MB
+        let memoryInfo = modelManager.getMemoryInfo()
+        let usedMB = Double(memoryInfo.used) / (1024 * 1024) // Конвертируем в MB
+        return usedMB
     }
     
     func saveSession() {

@@ -67,17 +67,7 @@ class DatasetManager: ObservableObject {
                     print("Ошибка при загрузке датасета \(fileURL.lastPathComponent): \(error.localizedDescription)")
                 }
             }
-            
-            // Если нет датасетов, создаем демонстрационные
-            if loadedDatasets.isEmpty {
-                loadedDatasets = createDemoDatasets()
-                
-                // Сохраняем демонстрационные датасеты
-                for dataset in loadedDatasets {
-                    saveDataset(dataset)
-                }
-            }
-            
+        
             datasets = loadedDatasets
             
             // Выбираем первый датасет, если он есть

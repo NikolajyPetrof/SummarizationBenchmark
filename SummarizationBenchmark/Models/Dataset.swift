@@ -9,7 +9,7 @@ import Foundation
 
 /// Структура для представления датасета для тестирования суммаризации
 struct Dataset: Identifiable, Codable, Hashable {
-    let id = UUID()
+    var id = UUID()
     let name: String
     let description: String
     let source: DatasetSource
@@ -74,7 +74,7 @@ struct Dataset: Identifiable, Codable, Hashable {
 
 /// Запись в датасете
 struct DatasetEntry: Identifiable, Codable, Hashable {
-    let id = UUID()
+    var id = UUID()
     let text: String
     let referenceSummary: String?
     let metadata: [String: String]

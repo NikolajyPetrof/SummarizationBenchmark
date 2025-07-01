@@ -274,24 +274,9 @@ class ModelManager: ObservableObject {
     
     // Получение информации о памяти
     func getMemoryInfo() -> (used: Int, total: Int) {
-        // В MLX Swift API пока нет прямого метода memoryInfo(),
-        // поэтому будем использовать приближенные значения
-        let device = MLX.GPU.self
-        let total = max(device.cacheLimit, 1) // Гарантируем, что total не равен 0
-        
-        // Использованная память - это приблизительно 80% от кэша для загруженных моделей
-        var used = 0
-        
-        for modelId in loadedModelIds {
-            if let model = SummarizationModel.model(withId: modelId),
-               let baseRequirement = Double(model.memoryRequirement),
-               baseRequirement.isFinite { // Проверяем, что значение конечное
-                let scaledRequirement = baseRequirement * 0.8
-                let bytesRequirement = scaledRequirement * 1024 * 1024 // MB -> bytes
-                used += Int(bytesRequirement)
-            }
-        }
-        
+        // Используем MLX GPU API для получения реальных значений
+        let total = MLX.GPU.memoryLimit
+        let used = MLX.GPU.peakMemory
         return (used: used, total: total)
     }
     

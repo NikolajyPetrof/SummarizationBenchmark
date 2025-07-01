@@ -156,34 +156,61 @@ struct DatasetBenchmarkView: View {
     }
     
     // Представление для отображения результатов бенчмарка
+    @State private var copiedSummary: String? = nil
+    
     private var resultsView: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Results")
-                .font(.headline)
-            
             HStack {
-                Text("Average Performance:")
-                    .fontWeight(.medium)
+                Text("Results")
+                    .font(.headline)
                 
                 Spacer()
+                
+                Button(action: {
+                    copyAllResults()
+                }) {
+                    Label(copiedSummary == "all" ? "Copied!" : "Copy Summary", 
+                          systemImage: copiedSummary == "all" ? "checkmark" : "doc.on.doc")
+                }
+                .buttonStyle(.bordered)
+            }
+            
+            // Average Performance Card
+            VStack(alignment: .leading, spacing: 12) {
+                HStack {
+                    Text("Average Performance")
+                        .font(.subheadline)
+                        .fontWeight(.semibold)
+                    
+                    Spacer()
+                    
+                    Button(action: {
+                        copyAveragePerformance()
+                    }) {
+                        Image(systemName: copiedSummary == "avg" ? "checkmark" : "doc.on.doc")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+                }
                 
                 let avgTime = results.reduce(0) { $0 + $1.inferenceTime } / Double(results.count)
                 let avgTokensPerSec = results.reduce(0) { $0 + $1.tokensPerSecond } / Double(results.count)
-                
-                Text(String(format: "%.2f sec / %.2f tokens/sec", avgTime, avgTokensPerSec))
-                    .fontWeight(.medium)
-            }
-            
-            HStack {
-                Text("Memory Usage:")
-                    .fontWeight(.medium)
-                
-                Spacer()
-                
                 let avgMemory = results.reduce(0) { $0 + $1.memoryUsage } / Double(results.count)
-                Text(String(format: "%.2f MB", avgMemory))
-                    .fontWeight(.medium)
+                
+                LazyVGrid(columns: [
+                    GridItem(.flexible()),
+                    GridItem(.flexible()),
+                    GridItem(.flexible())
+                ], spacing: 8) {
+                    MetricItem(title: "Avg Time", value: String(format: "%.2fs", avgTime))
+                    MetricItem(title: "Avg Speed", value: String(format: "%.1f t/s", avgTokensPerSec))
+                    MetricItem(title: "Avg Memory", value: String(format: "%.1f MB", avgMemory))
+                }
             }
+            .padding()
+            .background(Color(NSColor.controlBackgroundColor))
+            .cornerRadius(8)
             
             Divider()
             
@@ -225,10 +252,7 @@ struct DatasetBenchmarkView: View {
             }
             .frame(height: 300)
             
-            Button("Export Results") {
-                exportResults()
-            }
-            .buttonStyle(.bordered)
+
         }
         .padding()
         .background(Color(NSColor.controlBackgroundColor))
@@ -250,9 +274,14 @@ struct DatasetBenchmarkView: View {
         // Определяем количество записей для бенчмарка
         let entriesCount = min(selectedSampleSize, dataset.entries.count)
         
+        // Получаем случайную выборку записей из датасета
+        let selectedEntries = dataset.entries.shuffled().prefix(entriesCount).enumerated().map { (index, entry) in
+            return (index, entry)
+        }
+        
         // Запускаем бенчмарк асинхронно
         Task {
-            for i in 0..<entriesCount {
+            for (i, (_, entry)) in selectedEntries.enumerated() {
                 if !isRunningBenchmark {
                     break // Прерываем, если бенчмарк был отменен
                 }
@@ -260,7 +289,7 @@ struct DatasetBenchmarkView: View {
                 currentEntryIndex = i
                 progress = Double(i) / Double(entriesCount)
                 
-                let entry = dataset.entries[i]
+                // Используем entry из выбранной выборки
                 
                 do {
                     // Запускаем бенчмарк для текущей записи
@@ -303,21 +332,63 @@ struct DatasetBenchmarkView: View {
         }
     }
     
-    // Экспорт результатов
-    private func exportResults() {
-        guard !results.isEmpty else {
-            errorMessage = "No results to export"
-            return
-        }
+    // Функции копирования
+    private func copyAllResults() {
+        let avgTime = results.reduce(0) { $0 + $1.inferenceTime } / Double(results.count)
+        let avgTokensPerSec = results.reduce(0) { $0 + $1.tokensPerSecond } / Double(results.count)
+        let avgMemory = results.reduce(0) { $0 + $1.memoryUsage } / Double(results.count)
         
-        // Здесь можно добавить логику экспорта результатов в JSON или CSV
-        // Например, сохранение в файл или отправка по email
+        let summary = """
+        Dataset Benchmark Results Summary:
+        
+        Average Performance:
+        - Inference Time: \(String(format: "%.2f", avgTime))s
+        - Tokens/Second: \(String(format: "%.1f", avgTokensPerSec))
+        - Memory Usage: \(String(format: "%.1f", avgMemory))MB
+        
+        Total Entries: \(results.count)
+        
+        Detailed Results:
+        \(results.enumerated().map { index, result in
+            "Entry \(index + 1): \(String(format: "%.2f", result.inferenceTime))s, \(String(format: "%.1f", result.tokensPerSecond)) t/s, \(String(format: "%.1f", result.memoryUsage))MB"
+        }.joined(separator: "\n"))
+        """
+        
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(summary, forType: .string)
+        copiedSummary = "all"
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copiedSummary = nil
+        }
     }
+    
+    private func copyAveragePerformance() {
+        let avgTime = results.reduce(0) { $0 + $1.inferenceTime } / Double(results.count)
+        let avgTokensPerSec = results.reduce(0) { $0 + $1.tokensPerSecond } / Double(results.count)
+        let avgMemory = results.reduce(0) { $0 + $1.memoryUsage } / Double(results.count)
+        
+        let avgPerformance = """
+        Average Performance:
+        Inference Time: \(String(format: "%.2f", avgTime))s
+        Tokens/Second: \(String(format: "%.1f", avgTokensPerSec))
+        Memory Usage: \(String(format: "%.1f", avgMemory))MB
+        """
+        
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(avgPerformance, forType: .string)
+        copiedSummary = "avg"
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copiedSummary = nil
+        }
+    }
+
 }
 
 // Структура для хранения результатов бенчмарка на датасете
 struct DatasetBenchmarkResult: Identifiable, Codable {
-    let id = UUID()
+    var id = UUID()
     let entryIndex: Int
     let entryId: UUID
     let modelId: String
@@ -340,5 +411,26 @@ struct DatasetBenchmarkResult: Identifiable, Codable {
         // Здесь можно добавить вычисление BLEU метрики
         // между generatedSummary и referenceSummary
         return nil
+    }
+}
+
+// MARK: - Metric Item Component
+struct MetricItem: View {
+    let title: String
+    let value: String
+    
+    var body: some View {
+        VStack(spacing: 4) {
+            Text(value)
+                .font(.title3)
+                .fontWeight(.semibold)
+            Text(title)
+                .font(.caption)
+                .foregroundColor(.secondary)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 8)
+        .background(Color(NSColor.textBackgroundColor))
+        .cornerRadius(6)
     }
 }

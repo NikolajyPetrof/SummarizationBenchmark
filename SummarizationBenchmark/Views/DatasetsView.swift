@@ -26,7 +26,30 @@ struct DatasetsView: View {
     
     var body: some View {
         NavigationStack {
-            VStack {
+            VStack(spacing: 0) {
+                // Кнопка добавления в верхней части
+                HStack {
+                    Spacer()
+                    Button(action: { isShowingAddSheet = true }) {
+                        HStack {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.title2)
+                            Text("Добавить датасет")
+                                .fontWeight(.semibold)
+                        }
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 12)
+                        .background(Color.accentColor)
+                        .cornerRadius(25)
+                        .shadow(color: Color.accentColor.opacity(0.3), radius: 4, x: 0, y: 2)
+                    }
+                    .buttonStyle(.plain)
+                }
+                .padding()
+                
+                Divider()
+                
                 if datasetManager.datasets.isEmpty {
                     emptyStateView
                 } else {
@@ -34,21 +57,10 @@ struct DatasetsView: View {
                 }
             }
             .navigationTitle("Датасеты")
-            .toolbar {
-                ToolbarItem(placement: .primaryAction) {
-                    Button(action: { isShowingAddSheet = true }) {
-                        Label("Добавить датасет", systemImage: "plus")
-                    }
-                }
-            }
             .sheet(isPresented: $isShowingAddSheet) {
                 addDatasetView
             }
-            .sheet(isPresented: $isShowingDetail) {
-                if let dataset = selectedDataset {
-                    datasetDetailView(dataset)
-                }
-            }
+
             .alert("Ошибка", isPresented: .constant(datasetManager.errorMessage != nil)) {
                 Button("OK") {
                     datasetManager.errorMessage = nil
@@ -61,31 +73,22 @@ struct DatasetsView: View {
     
     // Представление для пустого состояния
     private var emptyStateView: some View {
-        VStack(spacing: 16) {
-            Image(systemName: "doc.text.magnifyingglass")
-                .font(.system(size: 72))
+        VStack(spacing: 20) {
+            Image(systemName: "tray")
+                .font(.system(size: 80))
                 .foregroundColor(.secondary)
             
-            Text("Нет доступных датасетов")
-                .font(.title2)
+            Text("Нет датасетов")
+                .font(.title)
                 .fontWeight(.medium)
             
-            Text("Добавьте датасет для тестирования моделей суммаризации")
+            Text("Используйте кнопку выше, чтобы добавить датасет для тестирования моделей")
                 .font(.body)
                 .foregroundColor(.secondary)
                 .multilineTextAlignment(.center)
-                .padding(.horizontal)
-            
-            Button(action: { isShowingAddSheet = true }) {
-                Text("Добавить датасет")
-                    .fontWeight(.semibold)
-                    .padding()
-                    .background(Color.accentColor)
-                    .foregroundColor(.white)
-                    .cornerRadius(10)
-            }
-            .padding(.top)
+                .padding(.horizontal, 40)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
         .padding()
     }
     
@@ -93,12 +96,9 @@ struct DatasetsView: View {
     private var datasetListView: some View {
         List {
             ForEach(datasetManager.datasets) { dataset in
-                datasetRow(dataset)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        selectedDataset = dataset
-                        isShowingDetail = true
-                    }
+                NavigationLink(destination: datasetDetailView(dataset)) {
+                    datasetRow(dataset)
+                }
             }
             .onDelete(perform: deleteDatasets)
         }

@@ -33,10 +33,7 @@ class AppState: ObservableObject {
         
         // Инициализируем датасеты
         Task {
-            await datasetManager.loadDatasets()
-            if datasetManager.datasets.isEmpty {
-                await datasetManager.createDemoDatasets()
-            }
+             datasetManager.loadDatasets()
         }
     }
 }
@@ -304,9 +301,19 @@ struct MemoryInfoView: View {
     }
     
     private func startMemoryMonitoring() {
+        // Сразу обновляем информацию о памяти
+        updateMemoryInfo()
+        
+        // Запускаем таймер для периодического обновления
         timer = Timer.scheduledTimer(withTimeInterval: 1.0, repeats: true) { _ in
-            memoryInfo = (used: MLX.GPU.memoryLimit, total: MLX.GPU.cacheLimit)
+            self.updateMemoryInfo()
         }
+    }
+    
+    private func updateMemoryInfo() {
+        let used = MLX.GPU.peakMemory  // Используем пиковое значение памяти вместо cacheMemory
+        let total = MLX.GPU.memoryLimit // Максимальный размер кэша
+        memoryInfo = (used: used, total: total)
     }
 }
 
@@ -366,19 +373,9 @@ struct TextInputPanel: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 16) {
             // Header
-            HStack {
-                Text("Input Text")
-                    .font(.title2)
-                    .bold()
-                
-                Spacer()
-                
-                // Session Controls
-                Button("New Session") {
-                    // TODO: Implement new session
-                }
-                .buttonStyle(.borderedProminent)
-            }
+            Text("Input Text")
+                .font(.title2)
+                .bold()
             
             // Text Source Toggle
             Picker("Text Source", selection: $useCustomText) {
@@ -686,11 +683,24 @@ struct SummaryOutputView: View {
 // MARK: - Performance Metrics View
 struct PerformanceMetricsView: View {
     let metrics: BenchmarkResult.PerformanceMetrics
+    @State private var copiedMetric: String? = nil
     
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            Text("Performance Metrics")
-                .font(.headline)
+            HStack {
+                Text("Performance Metrics")
+                    .font(.headline)
+                
+                Spacer()
+                
+                Button(action: {
+                    copyAllMetrics()
+                }) {
+                    Label(copiedMetric == "all" ? "Copied!" : "Copy All", 
+                          systemImage: copiedMetric == "all" ? "checkmark" : "doc.on.doc")
+                }
+                .buttonStyle(.bordered)
+            }
             
             LazyVGrid(columns: [
                 GridItem(.flexible()),
@@ -700,34 +710,66 @@ struct PerformanceMetricsView: View {
                     title: "Inference Time",
                     value: "\(String(format: "%.2f", metrics.inferenceTime))s",
                     icon: "clock",
-                    color: .blue
+                    color: .blue,
+                    onCopy: { copyMetric("Inference Time: \(String(format: "%.2f", metrics.inferenceTime))s", key: "inference") }
                 )
                 
                 MetricCard(
                     title: "Tokens/Second",
                     value: "\(String(format: "%.1f", metrics.tokensPerSecond))",
                     icon: "speedometer",
-                    color: .green
+                    color: .green,
+                    onCopy: { copyMetric("Tokens/Second: \(String(format: "%.1f", metrics.tokensPerSecond))", key: "tokens") }
                 )
                 
                 MetricCard(
                     title: "Memory Used",
                     value: "\(String(format: "%.1f", metrics.memoryUsed))MB",
                     icon: "memorychip",
-                    color: .orange
+                    color: .orange,
+                    onCopy: { copyMetric("Memory Used: \(String(format: "%.1f", metrics.memoryUsed))MB", key: "memory") }
                 )
                 
                 MetricCard(
                     title: "Compression",
                     value: "\(String(format: "%.1f", metrics.compressionRatio * 100))%",
                     icon: "arrow.down.circle",
-                    color: .purple
+                    color: .purple,
+                    onCopy: { copyMetric("Compression: \(String(format: "%.1f", metrics.compressionRatio * 100))%", key: "compression") }
                 )
             }
         }
         .padding()
         .background(Color(NSColor.controlBackgroundColor))
         .cornerRadius(12)
+    }
+    
+    private func copyMetric(_ text: String, key: String) {
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(text, forType: .string)
+        copiedMetric = key
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copiedMetric = nil
+        }
+    }
+    
+    private func copyAllMetrics() {
+        let allMetrics = """
+        Performance Metrics:
+        Inference Time: \(String(format: "%.2f", metrics.inferenceTime))s
+        Tokens/Second: \(String(format: "%.1f", metrics.tokensPerSecond))
+        Memory Used: \(String(format: "%.1f", metrics.memoryUsed))MB
+        Compression: \(String(format: "%.1f", metrics.compressionRatio * 100))%
+        """
+        
+        NSPasteboard.general.clearContents()
+        NSPasteboard.general.setString(allMetrics, forType: .string)
+        copiedMetric = "all"
+        
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2) {
+            copiedMetric = nil
+        }
     }
 }
 
@@ -737,6 +779,15 @@ struct MetricCard: View {
     let value: String
     let icon: String
     let color: Color
+    let onCopy: (() -> Void)?
+    
+    init(title: String, value: String, icon: String, color: Color, onCopy: (() -> Void)? = nil) {
+        self.title = title
+        self.value = value
+        self.icon = icon
+        self.color = color
+        self.onCopy = onCopy
+    }
     
     var body: some View {
         VStack(spacing: 8) {
@@ -744,6 +795,15 @@ struct MetricCard: View {
                 Image(systemName: icon)
                     .foregroundColor(color)
                 Spacer()
+                
+                if let onCopy = onCopy {
+                    Button(action: onCopy) {
+                        Image(systemName: "doc.on.doc")
+                            .font(.caption)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundColor(.secondary)
+                }
             }
             
             VStack(alignment: .leading, spacing: 4) {
