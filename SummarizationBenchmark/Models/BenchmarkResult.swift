@@ -22,6 +22,15 @@ struct BenchmarkResult: Identifiable, Codable {
         let inferenceTime: Double     // Время генерации (сек)
         let tokensPerSecond: Double   // Скорость генерации
         let memoryUsed: Double        // Использованная память (MB)
+        
+        // Расширенные метрики памяти
+        var peakLoadMemory: Double?   // Пиковое использование памяти при загрузке (MB)
+        var peakInferenceMemory: Double? // Пиковое использование памяти при инференсе (MB)
+        var memoryPerBatchItem: Double? // Использование памяти на один элемент батча (MB)
+        var batchSize: Int?           // Размер батча, использованного при тестировании
+        var quantizationType: String? // Тип квантизации модели (INT4, INT8, etc.)
+        var memoryEfficiency: Double? // Эффективность использования памяти (%)
+        
         let summaryLength: Int        // Длина саммари (символы)
         let compressionRatio: Double  // Коэффициент сжатия (0.0 - 1.0)
         let inputLength: Int          // Длина входного текста

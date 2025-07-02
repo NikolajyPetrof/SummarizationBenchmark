@@ -293,7 +293,8 @@ struct DatasetBenchmarkView: View {
                 
                 do {
                     // Run benchmark for current entry
-                    try await benchmarkVM.runBenchmark(text: entry.text, model: model)
+                    // При тестировании наборов данных используем размер батча 1 по умолчанию
+                    try await benchmarkVM.runBenchmark(text: entry.text, model: model, batchSize: 1)
                     
                     if let result = benchmarkVM.currentResult {
                         // Create result for dataset entry
