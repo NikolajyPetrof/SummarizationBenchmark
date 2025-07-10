@@ -73,7 +73,9 @@ class ModelManager: ObservableObject {
         let task = Task { @MainActor in
             // Попытки загрузки с повторами
             var attempts = 0
-            let maxAttempts = 3
+            // Увеличиваем количество попыток для моделей Gemma
+            let maxAttempts = model.modelId.contains("gemma") ? 5 : 3
+            print("ModelManager: Максимальное количество попыток для \(model.name): \(maxAttempts)")
             var lastError: Error?
             
             while attempts < maxAttempts {
@@ -83,9 +85,15 @@ class ModelManager: ObservableObject {
                 do {
                     // Настройка памяти GPU в зависимости от размера модели
                     let baseMemoryRequirement = Double(model.memoryRequirement) ?? 0
-                    let scaledMemoryRequirement = baseMemoryRequirement * 0.8
+                    
+                    // Увеличиваем выделение памяти для моделей Gemma
+                    let scaleFactor = model.modelId.contains("gemma") ? 10 : 0.8
+                    print("ModelManager: Используем коэффициент масштабирования памяти: \(scaleFactor) для \(model.name)")
+                    
+                    let scaledMemoryRequirement = baseMemoryRequirement * scaleFactor
                     let memoryRequirementMB = scaledMemoryRequirement * 1024 * 1024
                     let memoryLimit = Int(memoryRequirementMB)
+                    print("ModelManager: Выделяем \(scaledMemoryRequirement)GB памяти для \(model.name)")
                     MLX.GPU.set(cacheLimit: memoryLimit)
                     
                     // Создаем LLM конфигурацию
@@ -124,10 +132,30 @@ class ModelManager: ObservableObject {
                     
                     // Если это не последняя попытка и ошибка связана с сетью, ждем перед повтором
                     if attempts < maxAttempts {
-                        if let urlError = error as? URLError, urlError.code == .timedOut {
-                            print("ModelManager: Ждем 5 секунд перед повторной попыткой...")
-                            self.modelLoadingStatus[model.modelId] = "Retrying in 5s..."
-                            try? await Task.sleep(nanoseconds: 5_000_000_000) // 5 секунд
+                        // Расширенная обработка сетевых ошибок
+                        if let urlError = error as? URLError {
+                            // Разные задержки в зависимости от типа ошибки
+                            var waitTime = 5
+                            
+                            switch urlError.code {
+                            case .timedOut:
+                                waitTime = 8
+                                print("ModelManager: Ошибка таймаута, ждем \(waitTime) секунд...")
+                            case .notConnectedToInternet, .networkConnectionLost:
+                                waitTime = 10
+                                print("ModelManager: Проблема с сетью, ждем \(waitTime) секунд...")
+                            default:
+                                waitTime = 5
+                                print("ModelManager: Сетевая ошибка \(urlError.code), ждем \(waitTime) секунд...")
+                            }
+                            
+                            self.modelLoadingStatus[model.modelId] = "Retrying in \(waitTime)s..."
+                            try? await Task.sleep(nanoseconds: UInt64(waitTime) * 1_000_000_000)
+                        } else if model.modelId.contains("gemma") {
+                            // Для моделей Gemma повторяем даже при других ошибках
+                            print("ModelManager: Особая обработка для Gemma, повторяем через 10 секунд...")
+                            self.modelLoadingStatus[model.modelId] = "Retrying in 10s..."
+                            try? await Task.sleep(nanoseconds: 10_000_000_000) // 10 секунд
                         } else {
                             // Для других ошибок не повторяем
                             break

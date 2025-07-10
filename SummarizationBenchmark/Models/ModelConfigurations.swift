@@ -17,8 +17,7 @@ struct ModelConfiguration: Identifiable, Hashable {
     
     /// Default summarization prompt that can be used across all models
     static let defaultSummarizationPrompt = """
-        Summarize the following text. Provide a concise summary that captures the main points and key information. The summary should be approximately 20-30% of the original text length. Respond in the **same language** as the input text. Do not translate the summary.  Do not add commentary.
-        
+        Summarize the following text
         """
     init(
         id: String,

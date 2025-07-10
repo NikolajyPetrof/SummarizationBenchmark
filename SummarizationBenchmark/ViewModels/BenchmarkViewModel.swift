@@ -82,7 +82,7 @@ class BenchmarkViewModel: ObservableObject {
                 print("📦 Имитация загрузки батча \(batchSize) в память...")
                 
                 // Подготовим все промпты сразу
-                let prompts = batchTexts.map { model.configuration.createPrompt(for: $0) }
+                _ = batchTexts.map { model.configuration.createPrompt(for: $0) }
                 
                 // Здесь мы должны выделить память для всего батча одновременно
                 // Для этого создадим дополнительные тензоры в памяти

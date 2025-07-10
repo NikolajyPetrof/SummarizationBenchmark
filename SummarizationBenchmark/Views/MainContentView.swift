@@ -43,7 +43,7 @@ struct ContentView: View {
     @StateObject private var appState = AppState()
     
     var body: some View {
-        return NavigationView {
+        HSplitView {
             SidebarView(benchmarkVM: appState.benchmarkVM, modelManager: appState.modelManager, datasetManager: appState.datasetManager, appState: appState)
             
             if appState.selectedTab == 0 {
@@ -53,7 +53,6 @@ struct ContentView: View {
             }
         }
         .frame(minWidth: 1200, minHeight: 800)
-        .navigationTitle("Summarization Benchmark")
     }
 }
 
@@ -1011,6 +1010,7 @@ enum TextPreset: String, CaseIterable {
     case space = "space"
     case gun = "gun"
     case penguin = "penguin"
+    case darkMatter = "darkMatter"
     
     var title: String {
         switch self {
@@ -1021,6 +1021,7 @@ enum TextPreset: String, CaseIterable {
         case .space: return "Space Exploration"
         case .gun: return "Зимнее утро"
         case .penguin: return "Penguin"
+        case .darkMatter: return "Dark Matter"
         }
     }
     
@@ -1092,6 +1093,11 @@ enum TextPreset: String, CaseIterable {
                 Пингвины питаются морепродуктами. Рыбу, кальмаров и креветок они ловят во время ныряния, но пищу не жуют — зубов у пингвина нет, он же птица! Зато у него в пасти особые шипы, которые помогают еде отправляться прямо в глотку.
 
                 Раз в год пингвины линяют. Линька происходит обычно весной: «зимнее», старое оперение пингвин меняет на новое, сбрасывая практически все перья! От трёх до четырёх недель, пока новое оперение отрастает, пингвин выглядит как пушистый серо-коричневый шарик. У нового пуха еще некоторое время нет водоотталкивающих свойств, поэтому плавать пингвин в это время не может.
+                """
+        case .darkMatter:
+            return """
+                Topic: Dark Matter Detection Methods
+                The purpose of this text is to provide sample data for testing. Language models can be evaluated on their ability to summarize text. Different models may produce different quality summaries. Summarization is an important task in natural language processing. Summarization is an important task in natural language processing. The quality of a summary can be measured using metrics like ROUGE. Abstractive summarization involves generating new sentences. Abstractive summarization involves generating new sentences. Abstractive summarization involves generating new sentences. Different models may produce different quality summaries. Different models may produce different quality summaries. The length of a summary can vary depending on the requirements. Different models may produce different quality summaries. Summarization is an important task in natural language processing. Abstractive summarization involves generating new sentences. This is a demonstration text for the summarization benchmark. This is a demonstration text for the summarization benchmark. The length of a summary can vary depending on the requirements. This is a demonstration text for the summarization benchmark. Summarization is an important task in natural language processing. The quality of a summary can be measured using metrics like ROUGE. Extractive summarization involves selecting sentences from the original text. Different models may produce different quality summaries.
                 """
         }
     }
