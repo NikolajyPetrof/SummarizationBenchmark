@@ -185,6 +185,8 @@ struct SidebarView: View {
             return "book"
         case .custom:
             return "doc.text"
+        case .arxivPapers:
+            return "doc.text"
         }
     }
     

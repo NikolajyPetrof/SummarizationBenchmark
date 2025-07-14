@@ -26,6 +26,11 @@ class ModelManager: ObservableObject {
     @Published var modelLoadingStatus: [String: String] = [:]
     @Published var modelErrors: [String: String] = [:]
     
+    // Добавляем отслеживание памяти и времени при загрузке моделей
+    private var modelMemoryUsage: [String: Int] = [:] // Память, используемая каждой моделью
+    private var modelLoadTimes: [String: Double] = [:] // Время загрузки каждой модели
+    private var baselineMemory: Int = 0 // Базовое использование памяти до загрузки моделей
+    
     private var loadingTasks: [String: Task<Void, Never>] = [:]
     
     // Ограничение на количество одновременных загрузок
@@ -34,6 +39,9 @@ class ModelManager: ObservableObject {
     
     init(appState: AppState? = nil) {
         self.appState = appState
+        // Инициализируем базовое использование памяти
+        self.baselineMemory = MLX.GPU.peakMemory
+        print("ModelManager: Базовое использование памяти: \(self.baselineMemory / (1024 * 1024)) MB")
     }
     
     func loadModel(_ model: SummarizationModel) async throws {
@@ -103,6 +111,14 @@ class ModelManager: ObservableObject {
                     )
                     
                     print("ModelManager: Начинаем загрузку контейнера для \(model.name)")
+                    
+                    // Запоминаем использование памяти до загрузки модели
+                    let memoryBeforeLoad = MLX.GPU.peakMemory
+                    print("ModelManager: Память до загрузки \(model.name): \(memoryBeforeLoad / (1024 * 1024)) MB")
+                    
+                    // Запоминаем время начала загрузки
+                    let loadStartTime = CFAbsoluteTimeGetCurrent()
+                    
                     let container = try await LLMModelFactory.shared.loadContainer(
                         configuration: llmConfig
                     ) { [weak self] progress in
@@ -113,6 +129,19 @@ class ModelManager: ObservableObject {
                             self?.modelLoadingProgress[model.modelId] = clampedProgress
                         }
                     }
+                    
+                    // Запоминаем использование памяти после загрузки модели
+                    let memoryAfterLoad = MLX.GPU.peakMemory
+                    let modelMemoryUsage = memoryAfterLoad - memoryBeforeLoad
+                    self.modelMemoryUsage[model.modelId] = modelMemoryUsage
+                    print("ModelManager: Память после загрузки \(model.name): \(memoryAfterLoad / (1024 * 1024)) MB")
+                    print("ModelManager: Модель \(model.name) использует \(modelMemoryUsage / (1024 * 1024)) MB памяти")
+                    
+                    // Запоминаем время загрузки модели
+                    let loadEndTime = CFAbsoluteTimeGetCurrent()
+                    let loadTime = loadEndTime - loadStartTime
+                    self.modelLoadTimes[model.modelId] = loadTime
+                    print("ModelManager: Время загрузки \(model.name): \(String(format: "%.2f", loadTime)) секунд")
                     
                     print("ModelManager: Контейнер для \(model.name) успешно загружен")
                     print("ModelManager: Модель \(model.name) успешно загружена")
@@ -300,12 +329,21 @@ class ModelManager: ObservableObject {
         return modelErrors[modelId] != nil
     }
     
+    // Получение времени загрузки модели
+    func getModelLoadTime(_ modelId: String) -> Double? {
+        return modelLoadTimes[modelId]
+    }
+    
     // Получение информации о памяти
-    func getMemoryInfo() -> (used: Int, total: Int) {
+    func getMemoryInfo() -> (used: Int, total: Int, peak: Int) {
         // Используем MLX GPU API для получения реальных значений
         let total = MLX.GPU.memoryLimit
-        let used = MLX.GPU.peakMemory
-        return (used: used, total: total)
+        let peak = MLX.GPU.peakMemory // Пиковое использование памяти
+        
+        // Рассчитываем использование памяти на основе загруженных моделей
+        let used = peak // Используем peakMemory как основу для текущего использования памяти
+        
+        return (used: used, total: total, peak: peak)
     }
     
     // Получение списка загруженных моделей

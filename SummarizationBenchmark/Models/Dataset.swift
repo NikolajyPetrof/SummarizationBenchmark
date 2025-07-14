@@ -21,7 +21,8 @@ struct Dataset: Identifiable, Codable, Hashable {
     enum DatasetSource: String, Codable, CaseIterable {
         case cnnDailyMail = "CNN/DailyMail"
         case redditTIFU = "Reddit TIFU"
-        case scientificAbstracts = "Scientific Abstracts"
+        case scientificAbstracts = "Scientific Abstracts (PubMed)"
+        case arxivPapers = "ArXiv Papers"
         case custom = "Custom"
     }
     

@@ -29,14 +29,6 @@ struct SummarizationModel: Identifiable, Hashable {
             }
         }
         
-        var color: String {
-            switch self {
-            case .tiny: return "slat"
-            case .small: return "green"
-            case .middle: return "yellow"
-            case .large: return "red"
-            }
-        }
     }
     
     // MARK: - Hashable conformance
@@ -80,11 +72,25 @@ extension SummarizationModel {
         ),
 
         SummarizationModel(
-            name: "Qwen2.5 1.5B Instruct",
-            modelId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
-            size: .tiny,
+            name: "Meta Llama 3 8B Instruct 8bit",
+            modelId: "mlx-community/Meta-Llama-3-8B-Instruct-8bit",
+            size: .small,
             configuration: ModelConfiguration(
-                id: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+                id: "mlx-community/Meta-Llama-3-8B-Instruct-8bit",
+                additionalMetadata: [
+                    "type": "decoder-only",
+                    "quantization": "8bit",
+                    "engine": "mlx"
+                ]
+            )
+        ),
+        
+        SummarizationModel(
+            name: "Meta Llama 3 8B Instruct 4bit",
+            modelId: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
+            size: .small,
+            configuration: ModelConfiguration(
+                id: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
                 additionalMetadata: [
                     "type": "decoder-only",
                     "quantization": "4bit",
@@ -93,13 +99,12 @@ extension SummarizationModel {
             )
         ),
         
-
         SummarizationModel(
-            name: "Meta Llama 3 8B Instruct 4bit",
-            modelId: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
-            size: .small,
+            name: "Qwen2.5 1.5B Instruct",
+            modelId: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
+            size: .tiny,
             configuration: ModelConfiguration(
-                id: "mlx-community/Meta-Llama-3-8B-Instruct-4bit",
+                id: "mlx-community/Qwen2.5-1.5B-Instruct-4bit",
                 additionalMetadata: [
                     "type": "decoder-only",
                     "quantization": "4bit",
@@ -138,20 +143,6 @@ extension SummarizationModel {
             ),
 
             SummarizationModel(
-                name: "DeepSeek R1‑0528 Qwen3 8B 4bit DWQ",
-                modelId: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
-                size: .small,
-                configuration: ModelConfiguration(
-                    id: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
-                    additionalMetadata: [
-                        "type": "decoder-only",
-                        "quantization": "4bit",
-                        "engine": "mlx"
-                    ]
-                )
-            ),
-            
-            SummarizationModel(
                 name: "DeepSeek R1 Distill Llama 8B",
                 modelId: "mlx-community/DeepSeek-R1-Distill-Llama-8B",
                 size: .large,
@@ -165,16 +156,26 @@ extension SummarizationModel {
                 )
             ),
         
+            SummarizationModel(
+                name: "DeepSeek R1‑0528 Qwen3 8B 4bit DWQ",
+                modelId: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
+                size: .small,
+                configuration: ModelConfiguration(
+                    id: "mlx-community/DeepSeek-R1-0528-Qwen3-8B-4bit-DWQ",
+                    additionalMetadata: [
+                        "type": "decoder-only",
+                        "quantization": "4bit",
+                        "engine": "mlx"
+                    ]
+                )
+            ),
+            
     ]
 }
 
 // MARK: - Static Helper Methods
 extension SummarizationModel {
-    /// Get the default prompt for all models
-    static var defaultPrompt: String {
-        return ModelConfiguration.defaultSummarizationPrompt
-    }
-    
+
     /// Получить модель по ID
     static func model(withId id: String) -> SummarizationModel? {
         return availableModels.first { $0.modelId == id }

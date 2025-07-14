@@ -46,19 +46,35 @@ struct BenchmarkControlsView: View {
                     }
                     
                     // Batch Size Control
-                    HStack(alignment: .center) {
-                        Text("Batch Size:")
-                            .font(.subheadline)
-                        
-                        Spacer()
-                        
-                        Picker("Batch Size", selection: $selectedBatchSize) {
-                            ForEach(availableBatchSizes, id: \.self) { size in
-                                Text("\(size)").tag(size)
+                    VStack(alignment: .leading, spacing: 8) {
+                        HStack(alignment: .center) {
+                            Text("Batch Size:")
+                                .font(.subheadline)
+                            
+                            Spacer()
+                            
+                            Picker("Batch Size", selection: $selectedBatchSize) {
+                                ForEach(availableBatchSizes, id: \.self) { size in
+                                    Text("\(size)").tag(size)
+                                }
                             }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .frame(width: 200)
                         }
-                        .pickerStyle(SegmentedPickerStyle())
-                        .frame(width: 200)
+                        
+                        if selectedBatchSize > 1 {
+                            HStack {
+                                Image(systemName: "info.circle")
+                                    .foregroundColor(.orange)
+                                    .font(.caption)
+                                
+                                Text("Демонстрация: параллельная обработка \(selectedBatchSize) копий текста")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                            }
+                            .padding(.horizontal, 4)
+                        }
                     }
                     .padding(.top, 4)
                 }

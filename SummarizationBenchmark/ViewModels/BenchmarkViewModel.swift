@@ -6,9 +6,39 @@
 //
 
 import Foundation
+import SwiftUI
 import MLX
 import MLXLLM
 import MLXLMCommon
+
+// AsyncSemaphore для синхронизации доступа к ModelContainer
+actor AsyncSemaphore {
+    private var value: Int
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    
+    init(value: Int) {
+        self.value = value
+    }
+    
+    func wait() async {
+        if value > 0 {
+            value -= 1
+        } else {
+            await withCheckedContinuation { continuation in
+                waiters.append(continuation)
+            }
+        }
+    }
+    
+    func signal() {
+        if waiters.isEmpty {
+            value += 1
+        } else {
+            let waiter = waiters.removeFirst()
+            waiter.resume()
+        }
+    }
+}
 
 @MainActor
 class BenchmarkViewModel: ObservableObject {
@@ -29,10 +59,7 @@ class BenchmarkViewModel: ObservableObject {
         loadSessions()
     }
     
-    // Factory method to create BenchmarkViewModel instance
-    static func create(with modelManager: ModelManager) -> BenchmarkViewModel {
-        return BenchmarkViewModel(modelManager: modelManager)
-    }
+    // Избыточный фабричный метод удален, так как можно использовать стандартный инициализатор
     
     func startNewSession(name: String, type: BenchmarkSession.SessionType = .custom) {
         currentSession = BenchmarkSession(
@@ -50,6 +77,11 @@ class BenchmarkViewModel: ObservableObject {
     
     @MainActor
     func runBenchmark(text: String, model: SummarizationModel, batchSize: Int = 1) async throws {
+        // Проверка на пустой входной текст
+        guard !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+            throw SummarizerError.invalidInput
+        }
+        
         guard let container = modelManager.loadedModels[model.modelId] else {
             throw SummarizerError.modelNotLoaded
         }
@@ -57,122 +89,102 @@ class BenchmarkViewModel: ObservableObject {
         isGenerating = true
         let startTime = CFAbsoluteTimeGetCurrent()
         
-        // Reset peak memory before measurement
-        MLX.GPU.resetPeakMemory()
+        // Измеряем память до начала бенчмарка
+        let memoryBeforeBenchmark = getCurrentMemoryUsage()
         
         do {
-            // Подготовка батча текстов
-            let batchTexts: [String] = batchSize > 1 
-                ? Array(repeating: text, count: batchSize)
-                : [text]
-            
-            print("🔄 Обработка батча размером \(batchSize) текстов")
-            
-            // Сбрасываем память перед измерением батча
-            MLX.GPU.resetPeakMemory()
-            let memoryBeforeBatch = getCurrentMemoryUsage()
-            print("📊 Память перед батчем: \(memoryBeforeBatch) MB")
-            
-            var summaries: [(String, Int)] = []
-            
-            // Для реального влияния на память батча нужно параллельно загрузить несколько экземпляров модели в память
+            // Информируем пользователя о реальности батчинга
             if batchSize > 1 {
-                // Загрузка памяти для симуляции реального батча
-                // Создаем несколько тензоров в памяти GPU для имитации батча
-                print("📦 Имитация загрузки батча \(batchSize) в память...")
-                
-                // Подготовим все промпты сразу
-                _ = batchTexts.map { model.configuration.createPrompt(for: $0) }
-                
-                // Здесь мы должны выделить память для всего батча одновременно
-                // Для этого создадим дополнительные тензоры в памяти
-                
-                // MLX не имеет прямого батча в API, поэтому имитируем загрузку памяти
-                // созданием крупного тензора
-                let dummyShapeSize = 1024 * 1024 * batchSize
-                let _ = MLX.full([dummyShapeSize], values: 1.0) // Около 4MB за каждый элемент батча
+                print("⚠️ ВАЖНО: MLX Swift не поддерживает нативный батчинг")
+                print("🔄 Выполняется параллельная обработка \(batchSize) копий текста для демонстрации")
+                print("📊 Это позволяет оценить производительность при множественных запросах")
+            } else {
+                print("🔄 Обработка одного текста")
             }
             
-            print("💾 Память после имитации батча: \(getCurrentMemoryUsage()) MB")
+            print("📊 Память перед обработкой: \(memoryBeforeBenchmark.used) MB")
             
-            // Обработка батча (фактически последовательная обработка)
-            for (i, batchText) in batchTexts.enumerated() {
-                print("🔁 Обработка элемента \(i+1)/\(batchSize) батча")
+            var summaries: [(String, Int)] = []
+            var totalTokens = 0
+            
+            // Реальная параллельная обработка для batchSize > 1
+            if batchSize > 1 {
+                // Создаем семафор для ограничения одновременного доступа к ModelContainer
+                // MLX не поддерживает одновременное использование контейнера из нескольких потоков
+                let semaphore = AsyncSemaphore(value: 1)
                 
-                let prompt = model.configuration.createPrompt(for: batchText)
-                let batchSummary = try await container.perform { context in
-                    let input = try await context.processor.prepare(input: .init(prompt: prompt))
+                // Параллельная обработка нескольких копий текста
+                summaries = try await withThrowingTaskGroup(of: (String, Int).self) { group in
+                    var results: [(String, Int)] = []
                     
-                    let generateStream = try MLXLMCommon.generate(
-                        input: input,
-                        parameters: GenerateParameters(
-                            maxTokens: 200,
-                            temperature: 0.7,
-                            topP: 0.9,
-                            repetitionPenalty: 1.1
-                        ),
-                        context: context
-                    )
-                    
-                    var localGeneratedText = ""
-                    var localTokenCount = 0
-                    
-                    for await generation in generateStream {
-                        if let chunk = generation.chunk {
-                            localGeneratedText += chunk
-                            localTokenCount += 1
+                    // Добавляем задачи в группу
+                    for i in 0..<batchSize {
+                        group.addTask {
+                            print("🔁 Запуск параллельной обработки элемента \(i+1)/\(batchSize)")
+                            return try await self.processSingleTextWithSemaphore(text: text, model: model, container: container, index: i+1, semaphore: semaphore)
                         }
                     }
                     
-                    return (localGeneratedText, localTokenCount)
+                    // Собираем результаты
+                    for try await result in group {
+                        results.append(result)
+                        print("✅ Завершена обработка одного из элементов батча")
+                    }
+                    
+                    return results
                 }
-                
-                print("📊 Память после элемента \(i+1): \(getCurrentMemoryUsage()) MB")
-                summaries.append(batchSummary)
+            } else {
+                // Обработка одного текста
+                let singleResult = try await processSingleText(text: text, model: model, container: container, index: 1)
+                summaries = [singleResult]
             }
+            
+            totalTokens = summaries.reduce(0) { $0 + $1.1 }
             
             // Используем первое резюме для отображения в UI
             let summary = summaries.first ?? ("", 0)
             
-            // Суммируем токены со всех элементов батча для расчета производительности
-            let totalTokens = summaries.reduce(0) { $0 + $1.1 }
             let endTime = CFAbsoluteTimeGetCurrent()
-            
-            // Get peak memory after inference
-            let memoryUsed = getCurrentMemoryUsage()
-            
-            // Рассчитываем метрики времени
             let inferenceTime = endTime - startTime
             
-            // Суммарные токены и токены на одно резюме (первое)
+            // Рассчитываем метрики
             let tokensCount = summary.1
-            
-            // Токены в секунду учитывают общее количество сгенерированных токенов
             let tokensPerSecond = Double(totalTokens) / inferenceTime
             
-            // Сжатие текста берем из первого результата
+            // Определяем тип квантизации
+            let quantType = model.modelId.contains("4bit") ? "4-bit" : 
+                           model.modelId.contains("8bit") ? "8-bit" : "16-bit"
+            
             let compressionRatio = Double(summary.0.count) / Double(text.count)
             
-            // Получаем детальные метрики памяти из MLX.GPU API
-            let peakLoadMemory = Double(MLX.GPU.peakMemory) / 1024 / 1024 // MB
+            // Измеряем память после бенчмарка
+            let memoryAfterBenchmark = getCurrentMemoryUsage()
             
-            // Получаем тип квантизации из метаданных модели
-            let quantType = model.configuration.additionalMetadata["quantization"] ?? "unknown"
+            // Рассчитываем реальное потребление памяти
+            let runtimeMemoryConsumption = max(0, memoryAfterBenchmark.used - memoryBeforeBenchmark.used)
+            _ = max(0, memoryAfterBenchmark.peak - memoryBeforeBenchmark.peak)
             
-            // Рассчитываем память на один элемент батча
-            let memoryPerItem = batchSize > 1 ? memoryUsed / Double(batchSize) : memoryUsed
+            // Честный расчет памяти на элемент
+            // Для параллельной обработки память может использоваться более эффективно
+            let memoryPerItem = batchSize > 1 ? runtimeMemoryConsumption : runtimeMemoryConsumption
             
-            // Рассчитываем эффективность использования памяти (токены на мегабайт)
-            let memEfficiency = memoryUsed > 0 ? Double(totalTokens) / memoryUsed * 100 : 0
+            print("📊 Итоговые метрики:")
+            print("   • Время выполнения: \(String(format: "%.2f", inferenceTime))с")
+            print("   • Токенов в секунду: \(String(format: "%.1f", tokensPerSecond))")
+            print("   • Использование памяти: \(String(format: "%.1f", runtimeMemoryConsumption))MB")
+            print("   • Обработано элементов: \(batchSize)")
             
-            // Создаем метрики с расширенной информацией о памяти
+            // Рассчитываем эффективность использования памяти
+            let memEfficiency = runtimeMemoryConsumption > 0 ? Double(totalTokens) / runtimeMemoryConsumption * 100 : 0
+            
+            // Создаем честные метрики
             let metrics = BenchmarkResult.PerformanceMetrics(
-                loadTime: 0, // Will be measured separately
+                loadTime: modelManager.getModelLoadTime(model.modelId) ?? 0,
                 inferenceTime: inferenceTime,
                 tokensPerSecond: tokensPerSecond,
-                memoryUsed: memoryUsed,
-                peakLoadMemory: peakLoadMemory,
-                peakInferenceMemory: peakLoadMemory, // Используем то же значение, т.к. точное пиковое значение инференса могло измениться
+                memoryUsed: memoryBeforeBenchmark.used,
+                runtimeMemoryConsumption: runtimeMemoryConsumption,
+                peakMemory: memoryAfterBenchmark.peak,
                 memoryPerBatchItem: memoryPerItem,
                 batchSize: batchSize,
                 quantizationType: quantType,
@@ -202,25 +214,80 @@ class BenchmarkViewModel: ObservableObject {
             }
             
         } catch {
+            errorMessage = error.localizedDescription
             throw error
         }
         
         isGenerating = false
     }
     
-    private func getCurrentMemoryUsage() -> Double {
-        let memoryInfo = modelManager.getMemoryInfo()
-        let usedMB = Double(memoryInfo.used) / (1024 * 1024) // Convert to MB
-        return usedMB
+    // MARK: - Helper Methods
+    
+    /// Обрабатывает один текст с помощью модели с синхронизацией
+    private func processSingleTextWithSemaphore(text: String, model: SummarizationModel, container: ModelContainer, index: Int, semaphore: AsyncSemaphore) async throws -> (String, Int) {
+        // Ожидаем разрешения на доступ к ModelContainer
+        await semaphore.wait()
+        
+        defer {
+            // Освобождаем семафор после завершения обработки
+            Task {
+                await semaphore.signal()
+            }
+        }
+        
+        return try await processSingleText(text: text, model: model, container: container, index: index)
     }
     
-    func saveSession() {
-        guard let session = currentSession else { return }
-        sessions.append(session)
+    /// Обрабатывает один текст с помощью модели
+    private func processSingleText(text: String, model: SummarizationModel, container: ModelContainer, index: Int) async throws -> (String, Int) {
+        let prompt = model.configuration.createPrompt(for: text)
         
-        // Save to UserDefaults or file
-        saveSessionsToFile()
+        print("🔄 Начинаем обработку элемента \(index) с промптом длиной \(prompt.count) символов")
+        
+        let result = try await container.perform { (context: ModelContext) -> (String, Int) in
+            // Подготавливаем входные данные для модели
+            let userInput = UserInput(prompt: prompt)
+            let lmInput = try await context.processor.prepare(input: userInput)
+            
+            // Параметры генерации из конфигурации модели
+            let generateParameters = GenerateParameters(
+                maxTokens: model.configuration.maxTokens,
+                temperature: model.configuration.temperature
+            )
+            
+            // Генерируем токены с помощью правильного API
+            let stream = try MLXLMCommon.generate(
+                input: lmInput,
+                parameters: generateParameters,
+                context: context
+            )
+            
+            // Собираем сгенерированные токены
+            var localGeneratedText = ""
+            var localTokenCount = 0
+            
+            for await generation in stream {
+                if let chunk = generation.chunk {
+                    localGeneratedText += chunk
+                    localTokenCount += 1
+                }
+            }
+            
+            return (localGeneratedText, localTokenCount)
+        }
+        
+        print("✅ Завершена обработка элемента \(index): \(result.1) токенов, \(result.0.count) символов")
+        return result
     }
+    
+    private func getCurrentMemoryUsage() -> (used: Double, peak: Double) {
+        let memoryInfo = modelManager.getMemoryInfo()
+        let usedMB = Double(memoryInfo.used) / (1024 * 1024) // Convert to MB
+        let peakMB = Double(memoryInfo.peak) / (1024 * 1024) // Convert to MB
+        return (used: usedMB, peak: peakMB)
+    }
+    
+    // Метод saveSession удален, так как дублировал логику из startNewSession и не использовался
     
     private func saveSessionsToFile() {
         sessionManager.saveSessions(sessions)

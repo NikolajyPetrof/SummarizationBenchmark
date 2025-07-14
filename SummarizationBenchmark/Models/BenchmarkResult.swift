@@ -24,8 +24,8 @@ struct BenchmarkResult: Identifiable, Codable {
         let memoryUsed: Double        // Использованная память (MB)
         
         // Расширенные метрики памяти
-        var peakLoadMemory: Double?   // Пиковое использование памяти при загрузке (MB)
-        var peakInferenceMemory: Double? // Пиковое использование памяти при инференсе (MB)
+        var runtimeMemoryConsumption: Double? // Потребление памяти за время выполнения (MB)
+        var peakMemory: Double?       // Пиковое использование памяти (MB)
         var memoryPerBatchItem: Double? // Использование памяти на один элемент батча (MB)
         var batchSize: Int?           // Размер батча, использованного при тестировании
         var quantizationType: String? // Тип квантизации модели (INT4, INT8, etc.)

@@ -6,7 +6,6 @@
 //
 
 import SwiftUI
-import AppKit
 
 struct DatasetsView: View {
     @ObservedObject var datasetManager: DatasetManager
@@ -383,6 +382,8 @@ struct DatasetsView: View {
                 dataset = await downloader.downloadRedditTIFUDataset(sampleSize: selectedSampleSize)
             case .scientificAbstracts:
                 dataset = await downloader.downloadScientificAbstractsDataset(sampleSize: selectedSampleSize)
+            case .arxivPapers:
+                dataset = await downloader.downloadArXivDataset(sampleSize: selectedSampleSize)
             case .custom:
                 // Custom datasets need separate logic
                 break
@@ -416,6 +417,8 @@ struct DatasetsView: View {
             return "book"
         case .custom:
             return "doc.text"
+        case .arxivPapers:
+            return "doc.text"
         }
     }
     
@@ -441,7 +444,9 @@ struct DatasetsView: View {
         case .redditTIFU:
             return "The Reddit TIFU dataset contains posts from the 'Today I F***ed Up' subreddit, where users share their failures and mistakes. Each post has a brief summary (TL;DR) written by the author."
         case .scientificAbstracts:
-            return "The Scientific Abstracts dataset contains scientific abstracts from various fields. Each abstract is accompanied by a summary that briefly describes the main research findings."
+            return "The PubMed dataset contains biomedical research papers and their abstracts. It focuses on medical and life science publications, providing high-quality scientific content for summarization tasks."
+        case .arxivPapers:
+            return "The ArXiv dataset contains scientific papers from various fields including computer science, physics, mathematics, and more. Each paper includes the full text and abstract for comprehensive summarization testing."
         case .custom:
             return "Custom dataset allows you to upload your own texts and summaries for testing summarization models."
         }
@@ -456,8 +461,24 @@ struct EntryDetailView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 16) {
                 Group {
-                    Text("Source Text")
-                        .font(.headline)
+                    HStack {
+                        Text("Source Text")
+                            .font(.headline)
+                        
+                        Spacer()
+                        
+                        Button(action: {
+                            PasteboardHelper.copyToClipboard(entry.text)
+                        }) {
+                            HStack(spacing: 4) {
+                                Image(systemName: "doc.on.doc")
+                                Text("Copy")
+                            }
+                            .font(.caption)
+                            .foregroundColor(.blue)
+                        }
+                        .buttonStyle(.plain)
+                    }
                     
                     Text(entry.text)
                         .font(.body)
@@ -468,8 +489,24 @@ struct EntryDetailView: View {
                 
                 if let summary = entry.referenceSummary {
                     Group {
-                        Text("Reference Summary")
-                            .font(.headline)
+                        HStack {
+                            Text("Reference Summary")
+                                .font(.headline)
+                            
+                            Spacer()
+                            
+                            Button(action: {
+                                PasteboardHelper.copyToClipboard(summary)
+                            }) {
+                                HStack(spacing: 4) {
+                                    Image(systemName: "doc.on.doc")
+                                    Text("Copy")
+                                }
+                                .font(.caption)
+                                .foregroundColor(.blue)
+                            }
+                            .buttonStyle(.plain)
+                        }
                         
                         Text(summary)
                             .font(.body)

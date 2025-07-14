@@ -45,7 +45,7 @@ struct PerformanceMetricsView: View {
                         value: "\(String(format: "%.2f", metrics.inferenceTime))s",
                         icon: "clock",
                         color: .blue,
-                        onCopy: { copyMetric("Inference Time: \(String(format: "%.2f", metrics.inferenceTime))s", key: "inference") }
+                        onCopy: { copyMetric("\(String(format: "%.2f", metrics.inferenceTime))", key: "inference") }
                     )
                     
                     MetricCard(
@@ -53,7 +53,7 @@ struct PerformanceMetricsView: View {
                         value: "\(String(format: "%.1f", metrics.tokensPerSecond))",
                         icon: "speedometer",
                         color: .green,
-                        onCopy: { copyMetric("Tokens/Second: \(String(format: "%.1f", metrics.tokensPerSecond))", key: "tokens") }
+                        onCopy: { copyMetric("\(String(format: "%.1f", metrics.tokensPerSecond))", key: "tokens") }
                     )
                     
                     MetricCard(
@@ -61,7 +61,7 @@ struct PerformanceMetricsView: View {
                         value: "\(String(format: "%.1f", metrics.memoryUsed))MB",
                         icon: "memorychip",
                         color: .orange,
-                        onCopy: { copyMetric("Memory Used: \(String(format: "%.1f", metrics.memoryUsed))MB", key: "memory") }
+                        onCopy: { copyMetric("\(String(format: "%.1f", metrics.memoryUsed))", key: "memory") }
                     )
                     
                     MetricCard(
@@ -69,7 +69,7 @@ struct PerformanceMetricsView: View {
                         value: "\(String(format: "%.1f", metrics.compressionRatio * 100))%",
                         icon: "arrow.down.circle",
                         color: .purple,
-                        onCopy: { copyMetric("Compression: \(String(format: "%.1f", metrics.compressionRatio * 100))%", key: "compression") }
+                        onCopy: { copyMetric("\(String(format: "%.1f", metrics.compressionRatio * 100))%", key: "compression") }
                     )
                 }
             }
@@ -86,25 +86,25 @@ struct PerformanceMetricsView: View {
                     GridItem(.flexible()),
                     GridItem(.flexible())
                 ], spacing: 12) {
-                    // Пиковая память при загрузке
-                    if let peakLoadMem = metrics.peakLoadMemory {
+                    // Потребление памяти за время выполнения
+                    if let runtimeMem = metrics.runtimeMemoryConsumption {
                         MetricCard(
-                            title: "Peak Load Memory",
-                            value: "\(String(format: "%.1f", peakLoadMem))MB",
-                            icon: "arrow.up.to.line",
-                            color: .red,
-                            onCopy: { copyMetric("Peak Load Memory: \(String(format: "%.1f", peakLoadMem))MB", key: "peak_load") }
+                            title: "Runtime Memory Consumption",
+                            value: "\(String(format: "%.1f", runtimeMem))MB",
+                            icon: "chart.bar.xaxis",
+                            color: .orange,
+                            onCopy: { copyMetric("\(String(format: "%.1f", runtimeMem))", key: "runtime_mem") }
                         )
                     }
                     
-                    // Пиковая память при инференсе
-                    if let peakInfMem = metrics.peakInferenceMemory {
+                    // Пиковое использование памяти
+                    if let peakMem = metrics.peakMemory {
                         MetricCard(
-                            title: "Peak Inference",
-                            value: "\(String(format: "%.1f", peakInfMem))MB",
+                            title: "Peak Memory",
+                            value: "\(String(format: "%.1f", peakMem))MB",
                             icon: "waveform.path.ecg",
-                            color: .orange,
-                            onCopy: { copyMetric("Peak Inference Memory: \(String(format: "%.1f", peakInfMem))MB", key: "peak_inference") }
+                            color: .red,
+                            onCopy: { copyMetric("\(String(format: "%.1f", peakMem))", key: "peak_mem") }
                         )
                     }
                     
@@ -115,19 +115,29 @@ struct PerformanceMetricsView: View {
                             value: "\(String(format: "%.1f", memPerItem))MB",
                             icon: "square.stack.3d.up",
                             color: .green,
-                            onCopy: { copyMetric("Per-item Memory: \(String(format: "%.1f", memPerItem))MB", key: "per_item") }
+                            onCopy: { copyMetric("\(String(format: "%.1f", memPerItem))", key: "per_item") }
                         )
                     }
                     
-                    // Размер батча
+                    // Размер батча с пояснением
                     if let batchSize = metrics.batchSize {
-                        MetricCard(
-                            title: "Batch Size",
-                            value: "\(batchSize)",
-                            icon: "square.on.square",
-                            color: .blue,
-                            onCopy: { copyMetric("Batch Size: \(batchSize)", key: "batch_size") }
-                        )
+                        VStack(alignment: .leading, spacing: 4) {
+                            MetricCard(
+                                title: batchSize > 1 ? "Parallel Tasks" : "Batch Size",
+                                value: "\(batchSize)",
+                                icon: batchSize > 1 ? "arrow.triangle.branch" : "square.on.square",
+                                color: batchSize > 1 ? .orange : .blue,
+                                onCopy: { copyMetric("\(batchSize)", key: "batch_size") }
+                            )
+                            
+                            if batchSize > 1 {
+                                Text("Параллельная обработка")
+                                    .font(.caption2)
+                                    .foregroundColor(.secondary)
+                                    .italic()
+                                    .padding(.horizontal, 8)
+                            }
+                        }
                     }
                     
                     // Тип квантизации
@@ -137,7 +147,7 @@ struct PerformanceMetricsView: View {
                             value: quantType,
                             icon: "hammer",
                             color: .purple,
-                            onCopy: { copyMetric("Quantization: \(quantType)", key: "quant") }
+                            onCopy: { copyMetric("\(quantType)", key: "quant") }
                         )
                     }
                     
@@ -148,7 +158,7 @@ struct PerformanceMetricsView: View {
                             value: "\(String(format: "%.1f", memEfficiency))%",
                             icon: "chart.bar",
                             color: .teal,
-                            onCopy: { copyMetric("Memory Efficiency: \(String(format: "%.1f", memEfficiency))%", key: "efficiency") }
+                            onCopy: { copyMetric("\(String(format: "%.1f", memEfficiency))%", key: "efficiency") }
                         )
                     }
                 }
@@ -181,12 +191,12 @@ struct PerformanceMetricsView: View {
         // Добавляем расширенные метрики памяти, если они доступны
         metricLines.append("\nAdvanced Memory Metrics:")
         
-        if let peakLoadMem = metrics.peakLoadMemory {
-            metricLines.append("Peak Load Memory: \(String(format: "%.1f", peakLoadMem))MB")
+        if let runtimeMem = metrics.runtimeMemoryConsumption {
+            metricLines.append("Runtime Memory Consumption: \(String(format: "%.1f", runtimeMem))MB")
         }
         
-        if let peakInfMem = metrics.peakInferenceMemory {
-            metricLines.append("Peak Inference Memory: \(String(format: "%.1f", peakInfMem))MB")
+        if let peakMem = metrics.peakMemory {
+            metricLines.append("Peak Memory: \(String(format: "%.1f", peakMem))MB")
         }
         
         if let memPerItem = metrics.memoryPerBatchItem {

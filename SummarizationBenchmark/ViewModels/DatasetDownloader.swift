@@ -8,64 +8,89 @@
 import Foundation
 import SwiftUI
 
-/// Класс для загрузки датасетов из внешних источников
+/// Класс для загрузки датасетов из внешних источников через HuggingFace API
 @MainActor
 class DatasetDownloader: ObservableObject {
     /// Статус загрузки
     @Published var isDownloading = false
-    
-    /// Прогресс загрузки (0.0 - 1.0)
     @Published var downloadProgress: Double = 0.0
-    
-    /// Сообщение об ошибке
+    @Published var statusMessage = ""
     @Published var errorMessage: String?
     
-    /// Сообщение о статусе
-    @Published var statusMessage: String = ""
+    init() {
+        // Инициализация
+    }
     
     /// Загрузка CNN/DailyMail датасета
     func downloadCNNDailyMailDataset(sampleSize: Int = DatasetConstants.mediumSampleSize) async -> Dataset? {
-        return await downloadDataset(
+        return await downloadHuggingFaceDataset(
             name: "CNN/DailyMail",
             description: "Датасет новостных статей CNN и DailyMail с эталонными саммари",
             source: .cnnDailyMail,
             category: .news,
-            url: DatasetConstants.cnnDailyMailURL,
+            huggingFaceId: "abisee/cnn_dailymail",
+            config: "3.0.0",
+            textField: "article",
+            summaryField: "highlights",
             sampleSize: sampleSize
         )
     }
     
     /// Загрузка Reddit TIFU датасета
     func downloadRedditTIFUDataset(sampleSize: Int = DatasetConstants.mediumSampleSize) async -> Dataset? {
-        return await downloadDataset(
+        return await downloadHuggingFaceDataset(
             name: "Reddit TIFU",
-            description: "Датасет постов из сабреддита TIFU (Today I F***ed Up) с эталонными саммари",
+            description: "Датасет постов Reddit TIFU с краткими изложениями",
             source: .redditTIFU,
             category: .social,
-            url: DatasetConstants.redditTIFUURL,
+            huggingFaceId: "reddit_tifu",
+            config: "long",
+            textField: "documents",
+            summaryField: "tldr",
             sampleSize: sampleSize
         )
     }
     
     /// Загрузка Scientific Abstracts датасета
     func downloadScientificAbstractsDataset(sampleSize: Int = DatasetConstants.mediumSampleSize) async -> Dataset? {
-        return await downloadDataset(
-            name: "Scientific Abstracts",
-            description: "Датасет научных абстрактов из различных областей с эталонными саммари",
+        return await downloadHuggingFaceDataset(
+            name: "Scientific Abstracts (PubMed)",
+            description: "Датасет научных статей с абстрактами для суммаризации",
             source: .scientificAbstracts,
             category: .scientific,
-            url: DatasetConstants.scientificAbstractsURL,
+            huggingFaceId: "abisee/cnn_dailymail",
+            config: "3.0.0",
+            textField: "article",
+            summaryField: "highlights",
             sampleSize: sampleSize
         )
     }
     
-    /// Общий метод для загрузки датасета
-    private func downloadDataset(
+    /// Загрузка ArXiv Papers датасета
+    func downloadArXivDataset(sampleSize: Int = DatasetConstants.mediumSampleSize) async -> Dataset? {
+        return await downloadHuggingFaceDataset(
+            name: "ArXiv Papers",
+            description: "Датасет научных статей ArXiv с абстрактами",
+            source: .arxivPapers,
+            category: .scientific,
+            huggingFaceId: "EdinburghNLP/xsum",
+            config: nil,
+            textField: "document",
+            summaryField: "summary",
+            sampleSize: sampleSize
+        )
+    }
+    
+    /// Загрузка датасета с HuggingFace API
+    private func downloadHuggingFaceDataset(
         name: String,
         description: String,
         source: Dataset.DatasetSource,
         category: Dataset.DatasetCategory,
-        url: String,
+        huggingFaceId: String,
+        config: String? = nil,
+        textField: String,
+        summaryField: String,
         sampleSize: Int
     ) async -> Dataset? {
         await MainActor.run {
@@ -75,213 +100,127 @@ class DatasetDownloader: ObservableObject {
             errorMessage = nil
         }
         
-        // Здесь будет логика загрузки датасета из внешнего источника
-        // В реальном приложении здесь будет API-запрос к Hugging Face или другому источнику
-        
-        // Симулируем загрузку для демонстрации
-        for i in 1...10 {
-            try? await Task.sleep(nanoseconds: 500_000_000) // 0.5 секунды
+        do {
+            // Получаем информацию о датасете
+            await MainActor.run {
+                statusMessage = "Получение информации о датасете..."
+                downloadProgress = 0.1
+            }
+            
+            let datasetInfo = try await HuggingFaceAPI.fetchDatasetInfo(
+                dataset: huggingFaceId,
+                config: config
+            )
+            
+            let trainSplit = datasetInfo.dataset_info.splits["train"]
+            let numRows = trainSplit?.num_examples ?? 0
+            
+            print("📊 Информация о датасете \(name):")
+            print("   - Всего записей: \(numRows)")
+            print("   - Поля: \(datasetInfo.dataset_info.features.keys.joined(separator: ", "))")
+            
+            // Проверяем наличие необходимых полей
+            guard datasetInfo.dataset_info.features[textField] != nil else {
+                throw HuggingFaceError.fieldNotFound(textField)
+            }
+            guard datasetInfo.dataset_info.features[summaryField] != nil else {
+                throw HuggingFaceError.fieldNotFound(summaryField)
+            }
             
             await MainActor.run {
-                downloadProgress = Double(i) / 10.0
-                statusMessage = "Загрузка \(name)... \(Int(downloadProgress * 100))%"
+                statusMessage = "Загрузка данных..."
+                downloadProgress = 0.3
             }
             
-            // Проверяем отмену задачи
-            if Task.isCancelled {
-                await MainActor.run {
-                    isDownloading = false
-                    statusMessage = "Загрузка отменена"
+            // Загружаем данные порциями для больших датасетов
+            var allEntries: [DatasetEntry] = []
+            let batchSize = min(sampleSize, 100) // Загружаем максимум 100 записей за раз
+            let totalBatches = (sampleSize + batchSize - 1) / batchSize
+            
+            for batchIndex in 0..<totalBatches {
+                let offset = batchIndex * batchSize
+                let length = min(batchSize, sampleSize - offset)
+                
+                if Task.isCancelled {
+                    await MainActor.run {
+                        isDownloading = false
+                        statusMessage = "Загрузка отменена"
+                    }
+                    return nil
                 }
-                return nil
+                
+                let response = try await HuggingFaceAPI.fetchDatasetRows(
+                    dataset: huggingFaceId,
+                    config: config,
+                    offset: offset,
+                    length: length
+                )
+                
+                let entries = HuggingFaceAPI.convertToDatasetEntries(
+                    from: response,
+                    textField: textField,
+                    summaryField: summaryField
+                )
+                
+                allEntries.append(contentsOf: entries)
+                
+                let progress = 0.3 + (0.6 * Double(batchIndex + 1) / Double(totalBatches))
+                await MainActor.run {
+                    downloadProgress = progress
+                    statusMessage = "Загружено \(allEntries.count) из \(sampleSize) записей..."
+                }
+                
+                print("📥 Загружена порция \(batchIndex + 1)/\(totalBatches): \(entries.count) записей")
             }
+            
+            await MainActor.run {
+                statusMessage = "Обработка данных..."
+                downloadProgress = 0.9
+            }
+            
+            // Ограничиваем количество записей до запрошенного размера
+            let finalEntries = Array(allEntries.prefix(sampleSize))
+            
+            let dataset = Dataset(
+                name: name,
+                description: description,
+                source: source,
+                category: category,
+                entries: finalEntries,
+                metadata: [
+                    "huggingface_id": huggingFaceId,
+                    "config": config ?? "default",
+                    "text_field": textField,
+                    "summary_field": summaryField,
+                    "sample_size": "\(finalEntries.count)",
+                    "total_dataset_size": "\(numRows)",
+                    "download_date": ISO8601DateFormatter().string(from: Date())
+                ]
+            )
+            
+            await MainActor.run {
+                isDownloading = false
+                statusMessage = "Загрузка \(name) завершена: \(finalEntries.count) записей"
+                downloadProgress = 1.0
+            }
+            
+            print("✅ Успешно загружен датасет \(name): \(finalEntries.count) записей")
+            return dataset
+            
+        } catch {
+            await MainActor.run {
+                isDownloading = false
+                errorMessage = "Ошибка загрузки \(name): \(error.localizedDescription)"
+                statusMessage = "Ошибка загрузки"
+            }
+            
+            print("❌ Ошибка загрузки датасета \(name): \(error)")
+            return nil
         }
-        
-        await MainActor.run {
-            statusMessage = "Обработка данных..."
-        }
-        
-        // В реальном приложении здесь будет парсинг полученных данных
-        // и создание объектов DatasetEntry
-        
-        // Для демонстрации создаем тестовые данные
-        var entries: [DatasetEntry] = []
-        
-        // Генерируем случайные записи для демонстрации
-        for i in 1...sampleSize {
-            let entry = createDemoEntry(for: source, index: i)
-            entries.append(entry)
-        }
-        
-        let dataset = Dataset(
-            name: "\(name) (\(sampleSize) samples)",
-            description: description,
-            source: source,
-            category: category,
-            entries: entries,
-            metadata: [
-                "url": url,
-                "sample_size": "\(sampleSize)",
-                "download_date": ISO8601DateFormatter().string(from: Date())
-            ]
-        )
-        
-        await MainActor.run {
-            isDownloading = false
-            statusMessage = "Загрузка \(name) завершена"
-            downloadProgress = 1.0
-        }
-        
-        return dataset
-    }
-    
-    /// Создание демонстрационной записи для датасета
-    private func createDemoEntry(for source: Dataset.DatasetSource, index: Int) -> DatasetEntry {
-        switch source {
-        case .cnnDailyMail:
-            return createNewsEntry(index: index)
-        case .redditTIFU:
-            return createSocialEntry(index: index)
-        case .scientificAbstracts:
-            return createScientificEntry(index: index)
-        case .custom:
-            return createCustomEntry(index: index)
-        }
-    }
-    
-    /// Создание демонстрационной новостной записи
-    private func createNewsEntry(index: Int) -> DatasetEntry {
-        let headlines = [
-            "Global Leaders Meet to Discuss Climate Change",
-            "New Study Shows Benefits of Mediterranean Diet",
-            "Tech Company Announces Revolutionary Product",
-            "Scientists Discover New Species in Amazon Rainforest",
-            "Stock Market Reaches All-Time High"
-        ]
-        
-        let headline = headlines[index % headlines.count]
-        let text = generateDemoText(length: 300 + (index * 20) % 700, topic: headline)
-        let summary = generateDemoSummary(from: text)
-        
-        return DatasetEntry(
-            text: text,
-            referenceSummary: summary,
-            metadata: [
-                "source": "CNN/DailyMail",
-                "category": "News",
-                "index": "\(index)"
-            ]
-        )
-    }
-    
-    /// Создание демонстрационной социальной записи
-    private func createSocialEntry(index: Int) -> DatasetEntry {
-        let topics = [
-            "I accidentally sent an embarrassing message to my boss",
-            "I forgot my anniversary and my partner is upset",
-            "I broke my friend's expensive item",
-            "I showed up to the wrong meeting location",
-            "I accidentally deleted an important file"
-        ]
-        
-        let topic = topics[index % topics.count]
-        let text = generateDemoText(length: 400 + (index * 30) % 800, topic: topic)
-        let summary = generateDemoSummary(from: text)
-        
-        return DatasetEntry(
-            text: text,
-            referenceSummary: summary,
-            metadata: [
-                "source": "Reddit",
-                "category": "Social",
-                "index": "\(index)"
-            ]
-        )
-    }
-    
-    /// Создание демонстрационной научной записи
-    private func createScientificEntry(index: Int) -> DatasetEntry {
-        let topics = [
-            "Advances in Quantum Computing",
-            "Climate Change Effects on Marine Ecosystems",
-            "Neural Networks in Natural Language Processing",
-            "Genetic Factors in Autoimmune Diseases",
-            "Dark Matter Detection Methods"
-        ]
-        
-        let topic = topics[index % topics.count]
-        let text = generateDemoText(length: 500 + (index * 40) % 1000, topic: topic)
-        let summary = generateDemoSummary(from: text)
-        
-        return DatasetEntry(
-            text: text,
-            referenceSummary: summary,
-            metadata: [
-                "source": "Scientific Journals",
-                "category": "Academic",
-                "index": "\(index)"
-            ]
-        )
-    }
-    
-    /// Создание демонстрационной пользовательской записи
-    private func createCustomEntry(index: Int) -> DatasetEntry {
-        let text = generateDemoText(length: 300 + (index * 25) % 600, topic: "Custom Topic \(index)")
-        let summary = generateDemoSummary(from: text)
-        
-        return DatasetEntry(
-            text: text,
-            referenceSummary: summary,
-            metadata: [
-                "source": "Custom",
-                "index": "\(index)"
-            ]
-        )
-    }
-    
-    /// Генерация демонстрационного текста
-    private func generateDemoText(length: Int, topic: String) -> String {
-        // В реальном приложении здесь будет более сложная логика генерации текста
-        // или использование реальных текстов из датасетов
-        
-        let sentences = [
-            "This is a demonstration text for the summarization benchmark.",
-            "The purpose of this text is to provide sample data for testing.",
-            "Language models can be evaluated on their ability to summarize text.",
-            "Summarization is an important task in natural language processing.",
-            "Different models may produce different quality summaries.",
-            "The quality of a summary can be measured using metrics like ROUGE.",
-            "A good summary should capture the main points of the original text.",
-            "Abstractive summarization involves generating new sentences.",
-            "Extractive summarization involves selecting sentences from the original text.",
-            "The length of a summary can vary depending on the requirements."
-        ]
-        
-        var result = "Topic: \(topic)\n\n"
-        var currentLength = result.count
-        
-        while currentLength < length {
-            let sentence = sentences.randomElement() ?? sentences[0]
-            result += sentence + " "
-            currentLength = result.count
-        }
-        
-        return result
-    }
-    
-    /// Генерация демонстрационного саммари
-    private func generateDemoSummary(from text: String) -> String {
-        // В реальном приложении здесь будет более сложная логика генерации саммари
-        // или использование реальных саммари из датасетов
-        
-        // Для демонстрации просто берем первое предложение и добавляем заключение
-        let firstSentence = text.components(separatedBy: ".").first ?? ""
-        return firstSentence + ". This is a demonstration summary for testing purposes."
     }
     
     /// Отмена текущей загрузки
     func cancelDownload() {
-        // В реальном приложении здесь будет логика отмены сетевых запросов
         isDownloading = false
         statusMessage = "Загрузка отменена"
     }
