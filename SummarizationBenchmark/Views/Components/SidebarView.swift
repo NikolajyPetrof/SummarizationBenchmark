@@ -81,6 +81,17 @@ struct SidebarView: View {
                     .background(appState.selectedTab == 1 ? Color.accentColor.opacity(0.2) : Color.clear)
                     .foregroundColor(appState.selectedTab == 1 ? .accentColor : .primary)
                 }
+                
+                Button(action: { appState.selectedTab = 2 }) {
+                    HStack {
+                        Image(systemName: "terminal")
+                        Text("Python Models")
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding()
+                    .background(appState.selectedTab == 2 ? Color.accentColor.opacity(0.2) : Color.clear)
+                    .foregroundColor(appState.selectedTab == 2 ? .accentColor : .primary)
+                }
             }
             .buttonStyle(.plain)
             
@@ -104,7 +115,7 @@ struct SidebarView: View {
                         .padding(.horizontal)
                     }
                 }
-            } else {
+            } else if appState.selectedTab == 1 {
                 // Datasets Section
                 VStack(alignment: .leading) {
                     Text("Datasets")
@@ -121,6 +132,35 @@ struct SidebarView: View {
                         }
                         .padding(.horizontal)
                     }
+                }
+            } else {
+                // Python Models Section
+                VStack(alignment: .leading) {
+                    Text("Python Models")
+                        .font(.title2)
+                        .bold()
+                        .padding()
+                    
+                    Text("Используйте Python-модели для суммаризации с помощью Gemma 3 и других моделей, не поддерживаемых MLX Swift напрямую.")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                        .padding(.horizontal)
+                    
+                    Button(action: {
+                        appState.showPythonModelsView = true
+                    }) {
+                        HStack {
+                            Image(systemName: "terminal")
+                            Text("Открыть интерфейс Python-моделей")
+                        }
+                        .frame(maxWidth: .infinity)
+                        .padding()
+                        .background(Color.accentColor)
+                        .foregroundColor(.white)
+                        .cornerRadius(8)
+                    }
+                    .buttonStyle(.plain)
+                    .padding()
                 }
             }
             

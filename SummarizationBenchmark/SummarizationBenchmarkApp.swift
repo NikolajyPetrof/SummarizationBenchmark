@@ -76,6 +76,13 @@ struct AppCommands: Commands {
             
             Divider()
             
+            Button("Python Models (Gemma 3)") {
+                NotificationCenter.default.post(name: Notification.Name("ShowPythonModelsView"), object: nil)
+            }
+            .keyboardShortcut("p", modifiers: .command)
+            
+            Divider()
+            
             Button("Show GPU Memory Usage") {
                 // TODO: Show memory dialog
             }

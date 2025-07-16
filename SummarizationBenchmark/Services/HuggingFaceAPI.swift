@@ -7,13 +7,13 @@
 
 import Foundation
 
-/// Клиент для работы с HuggingFace Datasets API
+/// Client for working with HuggingFace Datasets API
 class HuggingFaceAPI {
     
-    /// Базовый URL для HuggingFace Datasets API
+    /// Base URL for HuggingFace Datasets API
     private static let baseURL = "https://datasets-server.huggingface.co"
     
-    /// Структура для информации о датасете
+    /// Structure for dataset information
     struct DatasetInfo: Codable {
         let dataset_info: DatasetInfoDetails
         let partial: Bool
@@ -63,7 +63,7 @@ class HuggingFaceAPI {
         }
     }
     
-    /// Универсальное значение для данных датасета
+    /// Universal value for dataset data
     enum DatasetValue: Codable {
         case string(String)
         case array([String])
@@ -79,7 +79,7 @@ class HuggingFaceAPI {
             } else if let arrayValue = try? container.decode([String].self) {
                 self = .array(arrayValue)
             } else {
-                // Попробуем декодировать как строку любое другое значение
+                // Try to decode any other value as a string
                 let stringValue = try container.decode(String.self)
                 self = .string(stringValue)
             }
@@ -109,7 +109,7 @@ class HuggingFaceAPI {
         }
     }
     
-    /// Загрузка информации о датасете
+    /// Load dataset information
     static func fetchDatasetInfo(dataset: String, config: String? = nil, split: String = "train") async throws -> DatasetInfo {
         var urlComponents = URLComponents(string: "\(baseURL)/info")!
         urlComponents.queryItems = [
@@ -151,7 +151,7 @@ class HuggingFaceAPI {
         }
     }
     
-    /// Загрузка данных датасета
+    /// Load dataset rows
     static func fetchDatasetRows(
         dataset: String,
         config: String? = nil,

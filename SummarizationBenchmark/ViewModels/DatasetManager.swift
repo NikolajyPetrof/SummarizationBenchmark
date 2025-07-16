@@ -56,6 +56,7 @@ class DatasetManager: ObservableObject {
             
             // Загружаем каждый датасет
             var loadedDatasets: [Dataset] = []
+            var hasErrors = false
             
             for fileURL in jsonFiles {
                 do {
@@ -65,13 +66,15 @@ class DatasetManager: ObservableObject {
                     loadedDatasets.append(dataset)
                 } catch {
                     print("Ошибка при загрузке датасета \(fileURL.lastPathComponent): \(error.localizedDescription)")
+                    hasErrors = true
                 }
             }
         
-            // Если нет загруженных датасетов, показываем пустой список
-            if loadedDatasets.isEmpty {
-                print("📝 Датасеты не найдены.")
-                datasets = []
+            // Если нет загруженных датасетов или были ошибки, создаем демонстрационные
+            if loadedDatasets.isEmpty || hasErrors {
+                print("📝 Создаем демонстрационные датасеты...")
+                createDemoDatasets()
+                return
             } else {
                 datasets = loadedDatasets
                 // Выбираем первый датасет, если он есть
@@ -81,6 +84,8 @@ class DatasetManager: ObservableObject {
             }
         } catch {
             errorMessage = "Ошибка при загрузке датасетов: \(error.localizedDescription)"
+            print("📝 Создаем демонстрационные датасеты после ошибки...")
+            createDemoDatasets()
         }
     }
     
@@ -96,6 +101,25 @@ class DatasetManager: ObservableObject {
         } catch {
             errorMessage = "Ошибка при сохранении датасета: \(error.localizedDescription)"
         }
+    }
+    
+    /// Создание демонстрационных датасетов
+    func createDemoDatasets() {
+        // Создаем демонстрационные датасеты
+        let scientificDemo = DatasetCreator.createScientificAbstractsDemo()
+        let newsDemo = DatasetCreator.createNewsDemo()
+        
+        // Сохраняем их
+        saveDataset(scientificDemo)
+        saveDataset(newsDemo)
+        
+        // Добавляем в список
+        datasets = [scientificDemo, newsDemo]
+        
+        // Выбираем первый датасет
+        selectedDataset = scientificDemo
+        
+        print("📝 Демонстрационные датасеты созданы и сохранены.")
     }
     
     /// Удаление датасета
