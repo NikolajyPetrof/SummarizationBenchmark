@@ -37,7 +37,7 @@ class HuggingFaceAPI {
         }
     }
     
-    /// Структура для ответа API с данными датасета
+    /// Structure for API response with dataset data
     struct DatasetResponse: Codable {
         let features: [FeatureInfo]
         let rows: [DatasetRow]
@@ -125,7 +125,7 @@ class HuggingFaceAPI {
             throw HuggingFaceError.invalidURL
         }
         
-        print("🔍 Запрос информации о датасете: \(url.absoluteString)")
+        print("🔍 Requesting dataset info: \(url.absoluteString)")
         
         let (data, response) = try await URLSession.shared.data(from: url)
         
@@ -133,11 +133,11 @@ class HuggingFaceAPI {
             throw HuggingFaceError.invalidResponse
         }
         
-        print("📡 HTTP статус: \(httpResponse.statusCode)")
+        print("📡 HTTP status: \(httpResponse.statusCode)")
         
         guard httpResponse.statusCode == 200 else {
             let responseString = String(data: data, encoding: .utf8) ?? "не удалось декодировать"
-            print("❌ HTTP ошибка \(httpResponse.statusCode): \(responseString)")
+            print("❌ HTTP error \(httpResponse.statusCode): \(responseString)")
             throw HuggingFaceError.httpError(httpResponse.statusCode)
         }
         
@@ -145,8 +145,8 @@ class HuggingFaceAPI {
             let datasetInfo = try JSONDecoder().decode(DatasetInfo.self, from: data)
             return datasetInfo
         } catch {
-            print("❌ Ошибка декодирования DatasetInfo: \(error)")
-            print("📄 Данные ответа: \(String(data: data, encoding: .utf8) ?? "не удалось декодировать")")
+            print("❌ Error decoding DatasetInfo: \(error)")
+            print("📄 Response data: \(String(data: data, encoding: .utf8) ?? "failed to decode")")
             throw HuggingFaceError.decodingError(error)
         }
     }
@@ -175,7 +175,7 @@ class HuggingFaceAPI {
             throw HuggingFaceError.invalidURL
         }
         
-        print("🔍 Запрос данных датасета: \(url.absoluteString)")
+        print("🔍 Requesting dataset data: \(url.absoluteString)")
         
         let (data, response) = try await URLSession.shared.data(from: url)
         
@@ -183,11 +183,11 @@ class HuggingFaceAPI {
             throw HuggingFaceError.invalidResponse
         }
         
-        print("📡 HTTP статус (данные): \(httpResponse.statusCode)")
+        print("📡 HTTP status (data): \(httpResponse.statusCode)")
         
         guard httpResponse.statusCode == 200 else {
             let responseString = String(data: data, encoding: .utf8) ?? "не удалось декодировать"
-            print("❌ HTTP ошибка (данные) \(httpResponse.statusCode): \(responseString)")
+            print("❌ HTTP error (data) \(httpResponse.statusCode): \(responseString)")
             throw HuggingFaceError.httpError(httpResponse.statusCode)
         }
         
@@ -195,13 +195,13 @@ class HuggingFaceAPI {
             let datasetResponse = try JSONDecoder().decode(DatasetResponse.self, from: data)
             return datasetResponse
         } catch {
-            print("❌ Ошибка декодирования DatasetResponse: \(error)")
-            print("📄 Данные ответа (данные): \(String(data: data, encoding: .utf8) ?? "не удалось декодировать")")
+            print("❌ Error decoding DatasetResponse: \(error)")
+            print("📄 Response data (data): \(String(data: data, encoding: .utf8) ?? "failed to decode")")
             throw HuggingFaceError.decodingError(error)
         }
     }
     
-    /// Конвертация HuggingFace данных в DatasetEntry
+    /// Convert HuggingFace data to DatasetEntry
     static func convertToDatasetEntries(
         from response: DatasetResponse,
         textField: String,
@@ -214,7 +214,7 @@ class HuggingFaceAPI {
                 return nil
             }
             
-            // Создаем метаданные из доступных полей
+            // Create metadata from available fields
             var metadata: [String: String] = [:]
             for (key, value) in row.row {
                 if key != textField && key != summaryField,
@@ -233,7 +233,7 @@ class HuggingFaceAPI {
     }
 }
 
-/// Ошибки HuggingFace API
+/// HuggingFace API Errors
 enum HuggingFaceError: LocalizedError {
     case invalidURL
     case invalidResponse
@@ -245,17 +245,17 @@ enum HuggingFaceError: LocalizedError {
     var errorDescription: String? {
         switch self {
         case .invalidURL:
-            return "Неверный URL для запроса к HuggingFace API"
+            return "Invalid URL for HuggingFace API request"
         case .invalidResponse:
-            return "Неверный ответ от HuggingFace API"
+            return "Invalid response from HuggingFace API"
         case .httpError(let code):
-            return "HTTP ошибка: \(code)"
+            return "HTTP error: \(code)"
         case .decodingError(let error):
-            return "Ошибка декодирования данных: \(error.localizedDescription)"
+            return "Data decoding error: \(error.localizedDescription)"
         case .datasetNotFound:
-            return "Датасет не найден"
+            return "Dataset not found"
         case .fieldNotFound(let field):
-            return "Поле '\(field)' не найдено в датасете"
+            return "Field '\(field)' not found in dataset"
         }
     }
 }

@@ -25,10 +25,18 @@ class PythonModelViewModel: ObservableObject {
     /// Результат суммаризации
     @Published var summary: String = ""
     
-    /// Доступные модели
+    /// Доступные модели (разделены по типам)
     @Published var availableModels: [PythonModel] = [
-        PythonModel(id: "mlx-community/SmolLM3-3B-4bit", name: "SmolLM3 3B 4bit", description: ""),
-        PythonModel(id: "mlx-community/gemma-3-4b-it-4bit", name: "gemma-3-4b-it-4bit", description: ""),
+        // MLX-optimized models for Apple Silicon
+        PythonModel(id: "mlx-community/SmolLM3-3B-4bit", name: "SmolLM3 3B (MLX)", description: "Optimized for Apple Silicon", isMLXModel: true),
+        PythonModel(id: "mlx-community/gemma-3-4b-it-4bit", name: "Gemma-3 4B (MLX)", description: "Optimized for Apple Silicon", isMLXModel: true),
+        PythonModel(id: "mlx-community/Llama-3.2-1B-Instruct-4bit", name: "Llama-3.2 1B (MLX)", description: "Optimized for Apple Silicon", isMLXModel: true),
+        PythonModel(id: "mlx-community/Phi-3.5-mini-instruct-4bit", name: "Phi-3.5 Mini (MLX)", description: "Optimized for Apple Silicon", isMLXModel: true),
+        
+        // Standard Transformers models
+        PythonModel(id: "facebook/bart-large-cnn", name: "BART Large CNN", description: "Reliable summarization model", isMLXModel: false),
+        PythonModel(id: "google/gemma-2-2b-it", name: "Gemma-2 2B", description: "Standard model", isMLXModel: false),
+        PythonModel(id: "HuggingFaceTB/SmolLM3-3B", name: "SmolLM3 3B (Standard)", description: "Standard model", isMLXModel: false),
     ]
     
     /// Выбранная модель
@@ -40,11 +48,20 @@ class PythonModelViewModel: ObservableObject {
     /// Температура для генерации (0.0-1.0)
     @Published var temperature: Double = 0.3
     
+    /// Таймаут для генерации в секундах
+    @Published var timeoutSeconds: Int = 300
+    
     /// Top-p для генерации (0.0-1.0)
     @Published var topP: Double = 0.8
     
+    /// Использовать MLX оптимизацию
+    @Published var useMLX: Bool = true
+    
     /// Зависимости установлены
     @Published var dependenciesInstalled: Bool = false
+    
+    /// Является ли устройство Apple Silicon
+    @Published var isAppleSilicon: Bool = false
     
     // MARK: - Private Properties
     
@@ -57,8 +74,21 @@ class PythonModelViewModel: ObservableObject {
     // MARK: - Initialization
     
     init() {
-        // Выбираем первую модель по умолчанию
-        self.selectedModel = availableModels.first!
+        // Проверяем архитектуру устройства
+        #if arch(arm64)
+        isAppleSilicon = true
+        #else
+        isAppleSilicon = false
+        #endif
+        
+        // Выбираем подходящую модель по умолчанию
+        if isAppleSilicon {
+            // Для Apple Silicon выбираем MLX-модель
+            self.selectedModel = availableModels.first { $0.isMLXModel } ?? availableModels.first!
+        } else {
+            // Для Intel выбираем стандартную модель
+            self.selectedModel = availableModels.first { !$0.isMLXModel } ?? availableModels.first!
+        }
         
         // Подписываемся на изменения в сервисе
         pythonModelService.$isProcessing
@@ -92,6 +122,27 @@ class PythonModelViewModel: ObservableObject {
         }
     }
     
+    // MARK: - Computed Properties
+    
+    /// Доступные MLX модели
+    var mlxModels: [PythonModel] {
+        availableModels.filter { $0.isMLXModel }
+    }
+    
+    /// Доступные стандартные модели
+    var standardModels: [PythonModel] {
+        availableModels.filter { !$0.isMLXModel }
+    }
+    
+    /// Рекомендуемые модели для текущего устройства
+    var recommendedModels: [PythonModel] {
+        if isAppleSilicon {
+            return mlxModels
+        } else {
+            return standardModels
+        }
+    }
+    
     // MARK: - Public Methods
     
     /// Суммаризирует текст с использованием выбранной модели
@@ -104,13 +155,19 @@ class PythonModelViewModel: ObservableObject {
             return
         }
         
+        // Автоматически определяем, использовать ли MLX
+        let shouldUseMLX = selectedModel.isMLXModel && isAppleSilicon && useMLX
+        
         do {
             let result = try await pythonModelService.summarizeText(
                 text,
                 modelPath: selectedModel.id,
                 maxTokens: maxTokens,
                 temperature: temperature,
-                topP: topP
+                topP: topP,
+                useMLX: shouldUseMLX,
+                timeout: timeoutSeconds,
+                verbose: true
             )
             
             await MainActor.run {
@@ -120,6 +177,11 @@ class PythonModelViewModel: ObservableObject {
         } catch {
             await MainActor.run {
                 self.errorMessage = "Ошибка суммаризации: \(error.localizedDescription)"
+                
+                // Если это ошибка MLX-модели на неподдерживаемом устройстве
+                if selectedModel.isMLXModel && !isAppleSilicon {
+                    self.errorMessage = "MLX-модели поддерживаются только на Apple Silicon. Выберите стандартную модель."
+                }
             }
         }
     }
@@ -144,8 +206,21 @@ class PythonModelViewModel: ObservableObject {
             self.dependenciesInstalled = result.success
             if !result.success {
                 self.errorMessage = result.message
+            } else {
+                self.statusMessage = "Зависимости успешно установлены"
             }
         }
+    }
+    
+    /// Выбирает рекомендуемую модель для текущего устройства
+    func selectRecommendedModel() {
+        selectedModel = recommendedModels.first ?? availableModels.first!
+    }
+    
+    /// Сбрасывает ошибки
+    func clearErrors() {
+        errorMessage = ""
+        fullErrorText = ""
     }
 }
 
@@ -159,4 +234,28 @@ struct PythonModel: Identifiable, Hashable {
     
     /// Описание модели
     let description: String
+    
+    /// Является ли модель MLX-оптимизированной
+    let isMLXModel: Bool
+    
+    /// Рекомендуемые параметры для модели
+    var recommendedMaxTokens: Int {
+        if isMLXModel {
+            return 200  // MLX модели быстрее, можем позволить больше токенов
+        } else {
+            return 150  // Стандартные модели медленнее
+        }
+    }
+    
+    var recommendedTemperature: Double {
+        if name.contains("SmolLM") {
+            return 0.3
+        } else if name.contains("Gemma") {
+            return 0.2
+        } else if name.contains("Llama") {
+            return 0.4
+        } else {
+            return 0.3
+        }
+    }
 }

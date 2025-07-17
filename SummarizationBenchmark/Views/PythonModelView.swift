@@ -67,6 +67,16 @@ struct PythonModelView: View {
                     Text(String(format: "%.2f", viewModel.topP))
                         .frame(width: 40, alignment: .trailing)
                 }
+                
+                HStack {
+                    Text("Таймаут (сек):")
+                    Slider(value: Binding(
+                        get: { Double(viewModel.timeoutSeconds) },
+                        set: { viewModel.timeoutSeconds = Int($0) }
+                    ), in: 30...600, step: 30)
+                    Text("\(viewModel.timeoutSeconds)")
+                        .frame(width: 40, alignment: .trailing)
+                }
             }
             
             // Ввод текста

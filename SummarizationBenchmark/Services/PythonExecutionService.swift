@@ -16,29 +16,29 @@ public class PythonExecutionService {
         progressHandler: ((Double) -> Void)? = nil,
         statusHandler: ((String) -> Void)? = nil
     ) async throws -> String {
-        // Проверяем наличие скрипта
+        // Check if script exists
         guard FileManager.default.fileExists(atPath: scriptPath) else {
             throw PythonModelError.scriptNotFound(scriptPath)
         }
         
-        // Поиск python через хэлпер
+        // Find python using helper
         guard let pythonPath = PythonEnvHelper.findPythonPath() else {
             throw PythonModelError.scriptExecutionFailed(1, "Python not found in any of the standard paths")
         }
         
-        // Устанавливаем начальный статус
+        // Set initial status
         progressHandler?(0.1)
         statusHandler?("Starting Python script...")
         
         let process = Process()
         process.executableURL = URL(fileURLWithPath: pythonPath)
         
-        // Аргументы для запуска Python-скрипта
+        // Arguments for running Python script
         var processArguments = [scriptPath]
         processArguments.append(contentsOf: arguments)
         process.arguments = processArguments
         
-        // Настраиваем окружение
+        // Configure environment
         var env = ProcessInfo.processInfo.environment
         let additionalPaths = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         if let path = env["PATH"] {
@@ -48,13 +48,13 @@ public class PythonExecutionService {
         }
         process.environment = env
         
-        // Настраиваем пайпы для вывода
+        // Set up output pipes
         let outputPipe = Pipe()
         let errorPipe = Pipe()
         process.standardOutput = outputPipe
         process.standardError = errorPipe
         
-        // Запускаем процесс
+        // Start process
         do {
             try process.run()
             
@@ -62,20 +62,20 @@ public class PythonExecutionService {
             progressHandler?(0.3)
             statusHandler?("Script is running...")
             
-            // Ждем завершения процесса
+            // Wait for process to complete
             process.waitUntilExit()
             
-            // Проверяем код возврата
+            // Check return code
             if process.terminationStatus != 0 {
-                // Получаем вывод ошибок
+                // Get error output
                 let errorData = errorPipe.fileHandleForReading.readDataToEndOfFile()
                 let errorMessage = String(data: errorData, encoding: .utf8) ?? "Unknown error"
                 
-                // Получаем стандартный вывод (может содержать дополнительную информацию)
+                // Get standard output (may contain additional information)
                 let outputData = outputPipe.fileHandleForReading.readDataToEndOfFile()
                 let outputMessage = String(data: outputData, encoding: .utf8) ?? ""
                 
-                // Создаем полный отчет об ошибке
+                // Create full error report
                 var fullErrorReport = "Error code: \(process.terminationStatus)\n"
                 
                 if !errorMessage.isEmpty {
@@ -117,13 +117,13 @@ public class PythonExecutionService {
     ///   - arguments: Command arguments
     /// - Returns: Command execution result (success and output)
     static func runCommand(command: String, arguments: [String]) async -> (success: Bool, output: String) {
-        // Для Python и pip проверяем несколько путей
+        // For Python and pip, check multiple paths
         if command == "python3" || command == "pip3" {
             let possiblePaths = command == "python3" ? 
                 PythonEnvHelper.pythonCandidates : 
                 PythonEnvHelper.pipCandidates
             
-            // Проверяем каждый путь
+            // Check each path
             for path in possiblePaths {
                 if FileManager.default.fileExists(atPath: path) {
                     let process = Process()
@@ -152,12 +152,12 @@ public class PythonExecutionService {
             }
         }
         
-        // Стандартный метод для других команд через env
+        // Standard method for other commands via env
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/env")
         process.arguments = [command] + arguments
         
-        // Добавляем пути к окружению
+        // Add paths to environment
         var env = ProcessInfo.processInfo.environment
         let additionalPaths = "/usr/local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         if let path = env["PATH"] {
